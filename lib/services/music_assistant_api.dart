@@ -101,31 +101,30 @@ class MusicAssistantAPI {
       _logger.log('Attempting ${useSecure ? "secure (WSS)" : "unsecure (WS)"} connection');
       _logger.log('Final WebSocket URL: $wsUrl');
 
-      // Construct a proper Uri with explicit port to avoid port 0 issue
-      // WebSocket.connect() needs a Uri, not a string, to properly handle ports
-      final int port;
+      // For Cloudflare and reverse proxies, don't include explicit port 443 for WSS
+      // Build the connection URL appropriately
+      String connectionUrl;
       if (_cachedCustomPort != null) {
-        port = _cachedCustomPort!;
-      } else if (uri.hasPort && uri.port != 0) {
-        port = uri.port;
+        // Custom port - include it explicitly
+        connectionUrl = '${uri.scheme}://${uri.host}:$_cachedCustomPort/ws';
+        _logger.log('Using custom port in URL: $connectionUrl');
+      } else if (uri.hasPort && uri.port != 0 && !(useSecure && uri.port == 443)) {
+        // Explicit non-default port in URL - include it (but not 443 for WSS)
+        connectionUrl = '${uri.scheme}://${uri.host}:${uri.port}/ws';
+        _logger.log('Using explicit port in URL: $connectionUrl');
+      } else if (!useSecure) {
+        // Unsecure connection - use port 8095
+        connectionUrl = '${uri.scheme}://${uri.host}:8095/ws';
+        _logger.log('Using port 8095 for unsecure connection: $connectionUrl');
       } else {
-        // Default ports based on scheme
-        port = useSecure ? 443 : 8095;
+        // Secure connection without custom port - omit port for Cloudflare compatibility
+        connectionUrl = '${uri.scheme}://${uri.host}/ws';
+        _logger.log('Using implicit port for secure connection: $connectionUrl');
       }
 
-      final connectionUri = Uri(
-        scheme: uri.scheme,
-        host: uri.host,
-        port: port,
-        path: '/ws',  // Always use /ws path for WebSocket endpoint
-      );
-
-      _logger.log('Connecting to: ${connectionUri.host}:${connectionUri.port}${connectionUri.path}');
-
       // Connect using native WebSocket with custom headers
-      // Convert Uri to string - the port is now explicit in the Uri, so toString() will include it
       final webSocket = await WebSocket.connect(
-        connectionUri.toString(),
+        connectionUrl,
         headers: {
           'User-Agent': 'MusicAssistantMobile/1.0',
         },
