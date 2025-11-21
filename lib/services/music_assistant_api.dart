@@ -42,19 +42,29 @@ class MusicAssistantAPI {
 
       // Parse server URL and construct WebSocket URL
       var wsUrl = serverUrl;
+      var useSecure = true; // Default to secure connection
+
+      _logger.log('Original server URL: $serverUrl');
+
       if (!wsUrl.startsWith('ws://') && !wsUrl.startsWith('wss://')) {
         // Determine protocol
         if (wsUrl.startsWith('https://')) {
           wsUrl = wsUrl.replaceFirst('https://', 'wss://');
+          useSecure = true;
         } else if (wsUrl.startsWith('http://')) {
           wsUrl = wsUrl.replaceFirst('http://', 'ws://');
+          useSecure = false;
         } else {
-          wsUrl = 'ws://$wsUrl';
+          // Default to secure WebSocket for plain domains
+          wsUrl = 'wss://$wsUrl';
+          useSecure = true;
         }
+      } else {
+        useSecure = wsUrl.startsWith('wss://');
       }
 
       // Add port if not present
-      if (!wsUrl.contains(':8095')) {
+      if (!wsUrl.contains(':8095') && !wsUrl.contains(':443') && !wsUrl.contains(':80')) {
         final uri = Uri.parse(wsUrl);
         wsUrl = '${uri.scheme}://${uri.host}:8095${uri.path}';
       }
@@ -64,7 +74,8 @@ class MusicAssistantAPI {
         wsUrl = '$wsUrl/ws';
       }
 
-      _logger.log('Connecting to Music Assistant at: $wsUrl');
+      _logger.log('Attempting ${useSecure ? "secure (WSS)" : "unsecure (WS)"} connection');
+      _logger.log('Final WebSocket URL: $wsUrl');
 
       _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
