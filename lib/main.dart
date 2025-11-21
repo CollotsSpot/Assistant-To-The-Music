@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'providers/music_player_provider.dart';
+import 'providers/music_assistant_provider.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -31,8 +32,11 @@ class MusicAssistantApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MusicPlayerProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => MusicPlayerProvider()),
+        ChangeNotifierProvider(create: (_) => MusicAssistantProvider()),
+      ],
       child: MaterialApp(
         title: 'Music Assistant',
         debugShowCheckedModeBanner: false,

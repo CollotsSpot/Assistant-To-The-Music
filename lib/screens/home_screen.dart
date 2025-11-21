@@ -1,46 +1,107 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_player_provider.dart';
+import '../providers/music_assistant_provider.dart';
 import '../widgets/now_playing_card.dart';
 import '../widgets/progress_bar.dart';
 import '../widgets/player_controls.dart';
-import 'playlist_screen.dart';
+import 'library_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const PlayerView(),
+    const LibraryScreen(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1a1a1a),
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF2a2a2a),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.transparent,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.white54,
+          elevation: 0,
+          type: BottomNavigationBarType.fixed,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.play_circle_outline_rounded),
+              activeIcon: Icon(Icons.play_circle_rounded),
+              label: 'Player',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_music_outlined),
+              activeIcon: Icon(Icons.library_music_rounded),
+              label: 'Library',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PlayerView extends StatelessWidget {
+  const PlayerView({super.key});
 
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<MusicPlayerProvider>();
+    final maProvider = context.watch<MusicAssistantProvider>();
 
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a1a),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text(
-          'Music Assistant',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20,
-            fontWeight: FontWeight.w300,
-          ),
+        title: Column(
+          children: [
+            const Text(
+              'Music Assistant',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w300,
+              ),
+            ),
+            if (maProvider.isConnected)
+              const Text(
+                'Connected',
+                style: TextStyle(
+                  color: Colors.green,
+                  fontSize: 12,
+                ),
+              ),
+          ],
         ),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.playlist_play_rounded),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const PlaylistScreen(),
-                ),
-              );
-            },
-            color: Colors.white,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Padding(
