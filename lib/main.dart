@@ -27,15 +27,50 @@ void main() {
   runApp(const MusicAssistantApp());
 }
 
-class MusicAssistantApp extends StatelessWidget {
+class MusicAssistantApp extends StatefulWidget {
   const MusicAssistantApp({super.key});
+
+  @override
+  State<MusicAssistantApp> createState() => _MusicAssistantAppState();
+}
+
+class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindingObserver {
+  late MusicAssistantProvider _musicAssistantProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _musicAssistantProvider = MusicAssistantProvider();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _musicAssistantProvider.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground - reconnect if we have a server URL
+      if (_musicAssistantProvider.serverUrl != null &&
+          _musicAssistantProvider.serverUrl!.isNotEmpty &&
+          !_musicAssistantProvider.isConnected) {
+        _musicAssistantProvider.connectToServer(_musicAssistantProvider.serverUrl!);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => MusicPlayerProvider()),
-        ChangeNotifierProvider(create: (_) => MusicAssistantProvider()),
+        ChangeNotifierProvider.value(value: _musicAssistantProvider),
       ],
       child: MaterialApp(
         title: 'Music Assistant',
