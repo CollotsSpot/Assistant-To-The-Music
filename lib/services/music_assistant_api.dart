@@ -593,6 +593,67 @@ class MusicAssistantAPI {
     }
   }
 
+  // Favorites
+  /// Toggle favorite status for any media item
+  Future<bool> toggleFavorite(String mediaType, String itemId, String provider) async {
+    try {
+      _logger.log('Toggling favorite for $mediaType: $itemId');
+      final response = await _sendCommand(
+        'music/favorites/toggle',
+        args: {
+          'media_type': mediaType,
+          'item_id': itemId,
+          'provider': provider,
+        },
+      );
+
+      final isFavorite = response['result'] as bool? ?? false;
+      _logger.log('Favorite toggled: $isFavorite');
+      return isFavorite;
+    } catch (e) {
+      _logger.log('Error toggling favorite: $e');
+      return false;
+    }
+  }
+
+  /// Mark item as favorite
+  Future<void> addToFavorites(String mediaType, String itemId, String provider) async {
+    try {
+      _logger.log('Adding to favorites: $mediaType/$itemId');
+      await _sendCommand(
+        'music/favorites/add',
+        args: {
+          'media_type': mediaType,
+          'item_id': itemId,
+          'provider': provider,
+        },
+      );
+      _logger.log('Added to favorites');
+    } catch (e) {
+      _logger.log('Error adding to favorites: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove item from favorites
+  Future<void> removeFromFavorites(String mediaType, String itemId, String provider) async {
+    try {
+      _logger.log('Removing from favorites: $mediaType/$itemId');
+      await _sendCommand(
+        'music/favorites/remove',
+        args: {
+          'media_type': mediaType,
+          'item_id': itemId,
+          'provider': provider,
+        },
+      );
+      _logger.log('Removed from favorites');
+    } catch (e) {
+      _logger.log('Error removing from favorites: $e');
+      rethrow;
+    }
+  }
+
   // Search
   Future<Map<String, List<MediaItem>>> search(String query) async {
     try {

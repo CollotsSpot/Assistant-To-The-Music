@@ -17,11 +17,43 @@ class AlbumDetailsScreen extends StatefulWidget {
 class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
   List<Track> _tracks = [];
   bool _isLoading = true;
+  bool _isFavorite = false;
 
   @override
   void initState() {
     super.initState();
+    _isFavorite = widget.album.favorite ?? false;
     _loadTracks();
+  }
+
+  Future<void> _toggleFavorite() async {
+    final maProvider = context.read<MusicAssistantProvider>();
+    if (maProvider.api == null) return;
+
+    try {
+      final newState = await maProvider.api!.toggleFavorite(
+        'album',
+        widget.album.itemId,
+        widget.album.provider,
+      );
+
+      setState(() {
+        _isFavorite = newState;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _isFavorite ? 'Added to favorites' : 'Removed from favorites',
+            ),
+            duration: const Duration(seconds: 1),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error toggling favorite: $e');
+    }
   }
 
   Future<void> _loadTracks() async {
@@ -180,22 +212,43 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton.icon(
-                      onPressed: _isLoading || _tracks.isEmpty ? null : _playAlbum,
-                      icon: const Icon(Icons.play_arrow_rounded),
-                      label: const Text('Play Album'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF1a1a1a),
-                        disabledBackgroundColor: Colors.white38,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 50,
+                          child: ElevatedButton.icon(
+                            onPressed: _isLoading || _tracks.isEmpty ? null : _playAlbum,
+                            icon: const Icon(Icons.play_arrow_rounded),
+                            label: const Text('Play Album'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: const Color(0xFF1a1a1a),
+                              disabledBackgroundColor: Colors.white38,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Container(
+                        height: 50,
+                        width: 50,
+                        decoration: BoxDecoration(
+                          color: _isFavorite ? Colors.red : Colors.white24,
+                          shape: BoxShape.circle,
+                        ),
+                        child: IconButton(
+                          onPressed: _toggleFavorite,
+                          icon: Icon(
+                            _isFavorite ? Icons.favorite : Icons.favorite_border,
+                            color: _isFavorite ? Colors.white : Colors.white70,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 24),
                   const Text(
