@@ -435,6 +435,9 @@ class MusicAssistantAPI {
 
   // Get stream URL for a track
   String getStreamUrl(String provider, String itemId, {String? uri}) {
+    // Debug logging
+    _logger.log('📍 getStreamUrl called: provider=$provider, itemId=$itemId, uri=$uri');
+
     var baseUrl = serverUrl;
     var useSecure = true;
 
@@ -470,6 +473,7 @@ class MusicAssistantAPI {
     String actualItemId = itemId;
 
     if (uri != null && uri.isNotEmpty) {
+      _logger.log('🔍 Parsing URI: $uri');
       try {
         // Split by "://" to get provider and path
         final parts = uri.split('://');
@@ -481,15 +485,20 @@ class MusicAssistantAPI {
           if (pathParts.isNotEmpty) {
             actualItemId = pathParts.last;
           }
+          _logger.log('✓ Parsed URI: provider=$actualProvider, itemId=$actualItemId');
         }
       } catch (e) {
         _logger.log('⚠️ Failed to parse track URI: $uri, using provider=$provider, itemId=$itemId');
       }
+    } else {
+      _logger.log('⚠️ No URI provided, using provider=$provider (may not be valid provider instance ID)');
     }
 
     // Music Assistant stream endpoint - use /preview endpoint
     // Format: /preview?item_id={itemId}&provider={provider}
-    return '$baseUrl/preview?item_id=$actualItemId&provider=$actualProvider';
+    final streamUrl = '$baseUrl/preview?item_id=$actualItemId&provider=$actualProvider';
+    _logger.log('🎵 Final stream URL: $streamUrl');
+    return streamUrl;
   }
 
   // Get image URL
