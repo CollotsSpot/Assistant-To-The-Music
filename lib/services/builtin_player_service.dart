@@ -112,6 +112,7 @@ class BuiltinPlayerService {
       final track = AudioTrack(
         id: 'builtin_player_track',
         title: 'Now Playing',
+        artist: 'Music Assistant',
         filePath: mediaUrl,
       );
 
