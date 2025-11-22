@@ -6,6 +6,42 @@ enum MediaType {
   radio,
 }
 
+class ProviderMapping {
+  final String itemId;
+  final String providerDomain;
+  final String providerInstance;
+  final bool available;
+  final Map<String, dynamic>? audioFormat;
+
+  ProviderMapping({
+    required this.itemId,
+    required this.providerDomain,
+    required this.providerInstance,
+    required this.available,
+    this.audioFormat,
+  });
+
+  factory ProviderMapping.fromJson(Map<String, dynamic> json) {
+    return ProviderMapping(
+      itemId: json['item_id'] as String,
+      providerDomain: json['provider_domain'] as String,
+      providerInstance: json['provider_instance'] as String,
+      available: json['available'] as bool? ?? true,
+      audioFormat: json['audio_format'] as Map<String, dynamic>?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'item_id': itemId,
+      'provider_domain': providerDomain,
+      'provider_instance': providerInstance,
+      'available': available,
+      if (audioFormat != null) 'audio_format': audioFormat,
+    };
+  }
+}
+
 class MediaItem {
   final String itemId;
   final String provider;
@@ -13,7 +49,7 @@ class MediaItem {
   final MediaType mediaType;
   final String? sortName;
   final String? uri;
-  final List<String>? providerMappings;
+  final List<ProviderMapping>? providerMappings;
   final Map<String, dynamic>? metadata;
   final bool? favorite;
   final int? position;
@@ -51,7 +87,7 @@ class MediaItem {
       sortName: json['sort_name'] as String?,
       uri: json['uri'] as String?,
       providerMappings: (json['provider_mappings'] as List<dynamic>?)
-          ?.map((e) => e.toString())
+          ?.map((e) => ProviderMapping.fromJson(e as Map<String, dynamic>))
           .toList(),
       metadata: json['metadata'] as Map<String, dynamic>?,
       favorite: json['favorite'] as bool?,

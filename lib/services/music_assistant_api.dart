@@ -446,9 +446,9 @@ class MusicAssistantAPI {
   }
 
   // Get stream URL for a track
-  String getStreamUrl(String provider, String itemId, {String? uri}) {
+  String getStreamUrl(String provider, String itemId, {String? uri, List<ProviderMapping>? providerMappings}) {
     // Debug logging
-    _logger.log('📍 getStreamUrl called: provider=$provider, itemId=$itemId, uri=$uri');
+    _logger.log('📍 getStreamUrl called: provider=$provider, itemId=$itemId, uri=$uri, mappings count=${providerMappings?.length ?? 0}');
 
     var baseUrl = serverUrl;
     var useSecure = true;
@@ -479,12 +479,27 @@ class MusicAssistantAPI {
       baseUrl = '${uriObj.scheme}://${uriObj.host}:${uriObj.port}';
     }
 
-    // If URI is provided, parse it to get the correct provider instance and item_id
-    // URI format: "builtin://track/413" or "opensubsonic--ETwFWrKe://track/1958"
     String actualProvider = provider;
     String actualItemId = itemId;
 
-    if (uri != null && uri.isNotEmpty) {
+    // PRIORITY 1: Use provider_mappings to get the ACTUAL provider instance
+    // The top-level "provider: library" is just a virtual view, not a real provider
+    if (providerMappings != null && providerMappings.isNotEmpty) {
+      _logger.log('🔍 Using provider_mappings to get real provider instance');
+
+      // Try to find the first available mapping
+      final mapping = providerMappings.firstWhere(
+        (m) => m.available,
+        orElse: () => providerMappings.first,
+      );
+
+      actualProvider = mapping.providerInstance; // e.g., "opensubsonic--ETwFWrKe"
+      actualItemId = mapping.itemId; // e.g., "HNF3R3sfsGVgelPM5hiolL"
+
+      _logger.log('✓ Using provider mapping: provider=${mapping.providerInstance}, itemId=${mapping.itemId}, domain=${mapping.providerDomain}');
+    }
+    // PRIORITY 2: Try to parse the URI if no provider mappings
+    else if (uri != null && uri.isNotEmpty && !uri.startsWith('library://')) {
       _logger.log('🔍 Parsing URI: $uri');
       try {
         // Split by "://" to get provider and path
@@ -503,7 +518,7 @@ class MusicAssistantAPI {
         _logger.log('⚠️ Failed to parse track URI: $uri, using provider=$provider, itemId=$itemId');
       }
     } else {
-      _logger.log('⚠️ No URI provided, using provider=$provider (may not be valid provider instance ID)');
+      _logger.log('⚠️ No provider mappings or URI, using provider=$provider (may not be valid provider instance ID)');
     }
 
     // Music Assistant stream endpoint - use /preview endpoint

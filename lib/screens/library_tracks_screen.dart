@@ -147,7 +147,12 @@ class LibraryTracksScreen extends StatelessWidget {
 
     // Convert all tracks to AudioTrack objects
     final audioTracks = tracks.map((track) {
-      final streamUrl = maProvider.getStreamUrl(track.provider, track.itemId, uri: track.uri);
+      final streamUrl = maProvider.getStreamUrl(
+        track.provider,
+        track.itemId,
+        uri: track.uri,
+        providerMappings: track.providerMappings,
+      );
       return AudioTrack(
         id: track.itemId,
         title: track.name,

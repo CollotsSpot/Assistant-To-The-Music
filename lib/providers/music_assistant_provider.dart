@@ -179,8 +179,8 @@ class MusicAssistantProvider with ChangeNotifier {
     }
   }
 
-  String getStreamUrl(String provider, String itemId, {String? uri}) {
-    return _api?.getStreamUrl(provider, itemId, uri: uri) ?? '';
+  String getStreamUrl(String provider, String itemId, {String? uri, List<ProviderMapping>? providerMappings}) {
+    return _api?.getStreamUrl(provider, itemId, uri: uri, providerMappings: providerMappings) ?? '';
   }
 
   String? getImageUrl(MediaItem item, {int size = 256}) {

@@ -45,7 +45,12 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
 
     // Convert Music Assistant tracks to AudioTrack objects with stream URLs
     final audioTracks = _tracks.map((track) {
-      final streamUrl = maProvider.getStreamUrl(track.provider, track.itemId, uri: track.uri);
+      final streamUrl = maProvider.getStreamUrl(
+        track.provider,
+        track.itemId,
+        uri: track.uri,
+        providerMappings: track.providerMappings,
+      );
       return AudioTrack(
         id: track.itemId,
         title: track.name,
@@ -72,7 +77,12 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
       // Debug: Log track object fields
       print('🔍 DEBUG Track object - provider: ${track.provider}, itemId: ${track.itemId}, uri: ${track.uri}');
 
-      final streamUrl = maProvider.getStreamUrl(track.provider, track.itemId, uri: track.uri);
+      final streamUrl = maProvider.getStreamUrl(
+        track.provider,
+        track.itemId,
+        uri: track.uri,
+        providerMappings: track.providerMappings,
+      );
       return AudioTrack(
         id: track.itemId,
         title: track.name,
