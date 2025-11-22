@@ -1,4 +1,5 @@
 import 'package:just_audio/just_audio.dart';
+import 'package:http/http.dart' as http;
 import '../models/audio_track.dart';
 import 'debug_logger.dart';
 
@@ -40,6 +41,29 @@ class AudioPlayerService {
     }
   }
 
+  Future<void> _testStreamUrl(String url) async {
+    try {
+      _logger.log('🔍 Testing stream URL accessibility...');
+      final response = await http.head(
+        Uri.parse(url),
+        headers: {'User-Agent': 'MusicAssistantMobile/1.0'},
+      ).timeout(const Duration(seconds: 5));
+
+      _logger.log('HTTP Response: ${response.statusCode}');
+      _logger.log('Content-Type: ${response.headers['content-type'] ?? 'none'}');
+      _logger.log('Content-Length: ${response.headers['content-length'] ?? 'unknown'}');
+
+      if (response.statusCode != 200) {
+        _logger.log('⚠️ Stream returned non-200 status: ${response.statusCode}');
+        _logger.log('Response headers: ${response.headers}');
+      } else {
+        _logger.log('✓ Stream URL is accessible');
+      }
+    } catch (e) {
+      _logger.log('⚠️ Stream test failed: $e');
+    }
+  }
+
   Future<void> loadTrack(int index) async {
     if (index >= 0 && index < _playlist.length) {
       _currentIndex = index;
@@ -52,6 +76,9 @@ class AudioPlayerService {
         // Use different audio source based on URL type
         if (track.filePath.startsWith('http://') ||
             track.filePath.startsWith('https://')) {
+          // Test the stream URL first
+          await _testStreamUrl(track.filePath);
+
           _logger.log('Creating progressive audio source for HTTP stream...');
 
           // Use ProgressiveAudioSource for HTTP/HTTPS streams
