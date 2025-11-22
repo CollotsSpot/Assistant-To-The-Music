@@ -388,6 +388,77 @@ class MusicAssistantAPI {
     }
   }
 
+  /// Get recently played albums
+  Future<List<Album>> getRecentAlbums({int limit = 10}) async {
+    try {
+      _logger.log('Fetching recently played albums (limit=$limit)');
+      final response = await _sendCommand(
+        'music/albums/library_items',
+        args: {
+          'limit': limit,
+          'order_by': 'last_played',
+        },
+      );
+
+      final items = response['result'] as List<dynamic>?;
+      if (items == null) return [];
+
+      _logger.log('Got ${items.length} recent albums');
+      return items
+          .map((item) => Album.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      _logger.log('Error getting recent albums: $e');
+      return [];
+    }
+  }
+
+  /// Get random albums
+  Future<List<Album>> getRandomAlbums({int limit = 10}) async {
+    try {
+      _logger.log('Fetching random albums (limit=$limit)');
+      final response = await _sendCommand(
+        'music/albums/library_items',
+        args: {
+          'limit': limit,
+          'order_by': 'random',
+        },
+      );
+
+      final items = response['result'] as List<dynamic>?;
+      if (items == null) return [];
+
+      _logger.log('Got ${items.length} random albums');
+      return items
+          .map((item) => Album.fromJson(item as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      _logger.log('Error getting random albums: $e');
+      return [];
+    }
+  }
+
+  /// Get library statistics
+  Future<Map<String, int>> getLibraryStats() async {
+    try {
+      _logger.log('Fetching library statistics');
+
+      // Get counts for each media type
+      final artistsResp = await _sendCommand('music/artists/library_items', args: {'limit': 1});
+      final albumsResp = await _sendCommand('music/albums/library_items', args: {'limit': 1});
+      final tracksResp = await _sendCommand('music/tracks/library_items', args: {'limit': 1});
+
+      return {
+        'artists': (artistsResp['count'] as int?) ?? 0,
+        'albums': (albumsResp['count'] as int?) ?? 0,
+        'tracks': (tracksResp['count'] as int?) ?? 0,
+      };
+    } catch (e) {
+      _logger.log('Error getting library stats: $e');
+      return {'artists': 0, 'albums': 0, 'tracks': 0};
+    }
+  }
+
   Future<Album?> getAlbumDetails(String provider, String itemId) async {
     try {
       final response = await _sendCommand(

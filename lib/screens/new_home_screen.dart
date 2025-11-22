@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../widgets/player_selector.dart';
+import '../widgets/album_row.dart';
+import '../widgets/library_stats.dart';
 import 'settings_screen.dart';
 
 class NewHomeScreen extends StatelessWidget {
@@ -101,143 +103,76 @@ class NewHomeScreen extends StatelessWidget {
   Widget _buildConnectedView(
       BuildContext context, MusicAssistantProvider provider) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Connection status
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF2a2a2a),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Connected to Music Assistant',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
 
           // Welcome message
-          const Text(
-            'Welcome',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 32,
-              fontWeight: FontWeight.w300,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'Welcome',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.w300,
+              ),
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Browse your music library or search for your favorite tracks',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'Discover your music',
+              style: TextStyle(
+                color: Colors.grey[400],
+                fontSize: 16,
+              ),
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
-          // Quick stats
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Artists',
-                  '${provider.artists.length}',
-                  Icons.person_outline_rounded,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Albums',
-                  '${provider.albums.length}',
-                  Icons.album_outlined,
-                ),
-              ),
-            ],
+          // Library stats
+          LibraryStats(
+            loadStats: () async {
+              if (provider.api == null) {
+                return {'artists': 0, 'albums': 0, 'tracks': 0};
+              }
+              return await provider.api!.getLibraryStats();
+            },
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Tracks',
-                  '${provider.tracks.length}',
-                  Icons.music_note_outlined,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2a2a2a),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+          const SizedBox(height: 24),
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return Container(
-      height: 100,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2a2a2a),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(
-            icon,
-            color: Colors.white54,
-            size: 24,
+          // Recently played albums
+          AlbumRow(
+            title: 'Recently Played',
+            loadAlbums: () async {
+              if (provider.api == null) return [];
+              return await provider.api!.getRecentAlbums(limit: 10);
+            },
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                ),
-              ),
-            ],
+          const SizedBox(height: 16),
+
+          // Random albums
+          AlbumRow(
+            title: 'Discover',
+            loadAlbums: () async {
+              if (provider.api == null) return [];
+              return await provider.api!.getRandomAlbums(limit: 10);
+            },
           ),
+          const SizedBox(height: 16),
+
+          // All albums
+          AlbumRow(
+            title: 'Albums',
+            loadAlbums: () async {
+              if (provider.api == null) return [];
+              return await provider.api!.getAlbums(limit: 20);
+            },
+          ),
+          const SizedBox(height: 80), // Space for mini player
         ],
       ),
     );
