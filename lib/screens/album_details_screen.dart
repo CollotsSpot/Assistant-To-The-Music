@@ -43,18 +43,18 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
     final maProvider = context.read<MusicAssistantProvider>();
 
     try {
-      // Get the built-in player ID (this mobile app)
-      final playerId = maProvider.builtinPlayerId;
-      if (playerId == null) {
-        _showError('Built-in player not registered');
+      // Use the selected player
+      final player = maProvider.selectedPlayer;
+      if (player == null) {
+        _showError('No player selected');
         return;
       }
 
-      print('🎵 Queueing album on built-in player: $playerId');
+      print('🎵 Queueing album on ${player.name}: ${player.playerId}');
 
-      // Queue all tracks via Music Assistant - the BuiltinPlayerService will handle playback
-      await maProvider.playTracks(playerId, _tracks, startIndex: 0);
-      print('✓ Album queued - playback will start automatically');
+      // Queue all tracks via Music Assistant
+      await maProvider.playTracks(player.playerId, _tracks, startIndex: 0);
+      print('✓ Album queued on ${player.name}');
 
       if (mounted) {
         Navigator.pop(context);
@@ -69,18 +69,18 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
     final maProvider = context.read<MusicAssistantProvider>();
 
     try {
-      // Get the built-in player ID (this mobile app)
-      final playerId = maProvider.builtinPlayerId;
-      if (playerId == null) {
-        _showError('Built-in player not registered');
+      // Use the selected player
+      final player = maProvider.selectedPlayer;
+      if (player == null) {
+        _showError('No player selected');
         return;
       }
 
-      print('🎵 Queueing tracks on built-in player: $playerId starting at index $index');
+      print('🎵 Queueing tracks on ${player.name} starting at index $index');
 
-      // Queue tracks starting at the selected index - BuiltinPlayerService will handle playback
-      await maProvider.playTracks(playerId, _tracks, startIndex: index);
-      print('✓ Tracks queued - playback will start automatically');
+      // Queue tracks starting at the selected index
+      await maProvider.playTracks(player.playerId, _tracks, startIndex: index);
+      print('✓ Tracks queued on ${player.name}');
 
       if (mounted) {
         Navigator.pop(context);

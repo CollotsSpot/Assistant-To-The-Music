@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
+import '../widgets/player_selector.dart';
 import 'settings_screen.dart';
 
 class NewHomeScreen extends StatelessWidget {
@@ -24,6 +25,9 @@ class NewHomeScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        actions: const [
+          PlayerSelector(),
+        ],
       ),
       body: SafeArea(
         child: !maProvider.isConnected

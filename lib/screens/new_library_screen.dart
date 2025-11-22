@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
+import '../widgets/player_selector.dart';
 import 'library_artists_screen.dart';
 import 'library_albums_screen.dart';
 import 'library_tracks_screen.dart';
@@ -27,6 +28,9 @@ class NewLibraryScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
+        actions: const [
+          PlayerSelector(),
+        ],
       ),
       body: !provider.isConnected
           ? _buildDisconnectedView(context, provider)

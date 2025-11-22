@@ -23,6 +23,10 @@ class MusicAssistantProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _error;
 
+  // Player selection
+  Player? _selectedPlayer;
+  List<Player> _availablePlayers = [];
+
   MAConnectionState get connectionState => _connectionState;
   String? get serverUrl => _serverUrl;
   List<Artist> get artists => _artists;
@@ -31,6 +35,10 @@ class MusicAssistantProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isConnected => _connectionState == MAConnectionState.connected;
+
+  // Player selection getters
+  Player? get selectedPlayer => _selectedPlayer;
+  List<Player> get availablePlayers => _availablePlayers;
 
   MusicAssistantProvider() {
     _initialize();
@@ -82,12 +90,17 @@ class MusicAssistantProvider with ChangeNotifier {
           _builtinPlayer = BuiltinPlayerService(_api!, _audioPlayer);
           _builtinPlayer!.start();
 
+          // Load available players and auto-select
+          _loadAndSelectPlayers();
+
           // Auto-load library when connected
           loadLibrary();
         } else if (state == MAConnectionState.disconnected) {
           // Stop built-in player service
           _builtinPlayer?.stop();
           _builtinPlayer = null;
+          _availablePlayers = [];
+          _selectedPlayer = null;
         }
       });
 
@@ -273,6 +286,47 @@ class MusicAssistantProvider with ChangeNotifier {
 
   // ============================================================================
   // END PLAYER AND QUEUE MANAGEMENT
+  // ============================================================================
+
+  // ============================================================================
+  // PLAYER SELECTION
+  // ============================================================================
+
+  /// Load available players and auto-select one
+  Future<void> _loadAndSelectPlayers() async {
+    try {
+      _availablePlayers = await getPlayers();
+      _logger.log('Loaded ${_availablePlayers.length} players');
+
+      if (_availablePlayers.isNotEmpty) {
+        // Auto-select the built-in player if available
+        final builtinPlayer = _availablePlayers.firstWhere(
+          (p) => p.playerId == builtinPlayerId,
+          orElse: () => _availablePlayers.first,
+        );
+        selectPlayer(builtinPlayer);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _logger.log('Error loading players: $e');
+    }
+  }
+
+  /// Select a player for playback
+  void selectPlayer(Player player) {
+    _selectedPlayer = player;
+    _logger.log('Selected player: ${player.name} (${player.playerId})');
+    notifyListeners();
+  }
+
+  /// Refresh the list of available players
+  Future<void> refreshPlayers() async {
+    await _loadAndSelectPlayers();
+  }
+
+  // ============================================================================
+  // END PLAYER SELECTION
   // ============================================================================
 
   @override
