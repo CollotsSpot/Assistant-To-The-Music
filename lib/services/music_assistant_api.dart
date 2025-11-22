@@ -9,6 +9,7 @@ import '../models/player.dart';
 import '../models/builtin_player_event.dart';
 import 'debug_logger.dart';
 import 'settings_service.dart';
+import 'retry_helper.dart';
 
 enum MAConnectionState {
   disconnected,
@@ -480,36 +481,43 @@ class MusicAssistantAPI {
   }
 
   Future<List<Track>> getAlbumTracks(String provider, String itemId) async {
-    try {
-      _logger.log('Fetching album tracks for provider=$provider, itemId=$itemId');
-      final response = await _sendCommand(
-        'music/albums/album_tracks',
-        args: {
-          'provider_instance_id_or_domain': provider,
-          'item_id': itemId,
-        },
-      );
+    return await RetryHelper.retryNetwork(
+      operation: () async {
+        try {
+          _logger.log('Fetching album tracks for provider=$provider, itemId=$itemId');
+          final response = await _sendCommand(
+            'music/albums/album_tracks',
+            args: {
+              'provider_instance_id_or_domain': provider,
+              'item_id': itemId,
+            },
+          );
 
-      final items = response['result'] as List<dynamic>?;
-      if (items == null) {
-        _logger.log('No result for album tracks');
-        return [];
-      }
+          final items = response['result'] as List<dynamic>?;
+          if (items == null) {
+            _logger.log('No result for album tracks');
+            return <Track>[];
+          }
 
-      _logger.log('Got ${items.length} album tracks');
+          _logger.log('Got ${items.length} album tracks');
 
-      // Debug: Log the first track's raw data to see what fields are available
-      if (items.isNotEmpty) {
-        _logger.log('🔍 DEBUG: First album track raw data: ${items[0]}');
-      }
+          // Debug: Log the first track's raw data to see what fields are available
+          if (items.isNotEmpty) {
+            _logger.log('🔍 DEBUG: First album track raw data: ${items[0]}');
+          }
 
-      return items
-          .map((item) => Track.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      _logger.log('Error getting album tracks: $e');
-      return [];
-    }
+          return items
+              .map((item) => Track.fromJson(item as Map<String, dynamic>))
+              .toList();
+        } catch (e) {
+          _logger.log('Error getting album tracks: $e');
+          return <Track>[];
+        }
+      },
+    ).catchError((e) {
+      _logger.log('Error getting album tracks after retries: $e');
+      return <Track>[];
+    });
   }
 
   /// Get playlists
@@ -567,30 +575,37 @@ class MusicAssistantAPI {
 
   /// Get playlist tracks
   Future<List<Track>> getPlaylistTracks(String provider, String itemId) async {
-    try {
-      _logger.log('Fetching playlist tracks for provider=$provider, itemId=$itemId');
-      final response = await _sendCommand(
-        'music/playlists/playlist_tracks',
-        args: {
-          'provider_instance_id_or_domain': provider,
-          'item_id': itemId,
-        },
-      );
+    return await RetryHelper.retryNetwork(
+      operation: () async {
+        try {
+          _logger.log('Fetching playlist tracks for provider=$provider, itemId=$itemId');
+          final response = await _sendCommand(
+            'music/playlists/playlist_tracks',
+            args: {
+              'provider_instance_id_or_domain': provider,
+              'item_id': itemId,
+            },
+          );
 
-      final items = response['result'] as List<dynamic>?;
-      if (items == null) {
-        _logger.log('No result for playlist tracks');
-        return [];
-      }
+          final items = response['result'] as List<dynamic>?;
+          if (items == null) {
+            _logger.log('No result for playlist tracks');
+            return <Track>[];
+          }
 
-      _logger.log('Got ${items.length} playlist tracks');
-      return items
-          .map((item) => Track.fromJson(item as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      _logger.log('Error getting playlist tracks: $e');
-      return [];
-    }
+          _logger.log('Got ${items.length} playlist tracks');
+          return items
+              .map((item) => Track.fromJson(item as Map<String, dynamic>))
+              .toList();
+        } catch (e) {
+          _logger.log('Error getting playlist tracks: $e');
+          return <Track>[];
+        }
+      },
+    ).catchError((e) {
+      _logger.log('Error getting playlist tracks after retries: $e');
+      return <Track>[];
+    });
   }
 
   // Favorites
@@ -656,35 +671,42 @@ class MusicAssistantAPI {
 
   // Search
   Future<Map<String, List<MediaItem>>> search(String query) async {
-    try {
-      final response = await _sendCommand(
-        'music/search',
-        args: {'search': query},
-      );
+    return await RetryHelper.retryNetwork(
+      operation: () async {
+        try {
+          final response = await _sendCommand(
+            'music/search',
+            args: {'search': query},
+          );
 
-      final result = response['result'] as Map<String, dynamic>?;
-      if (result == null) {
-        return {'artists': [], 'albums': [], 'tracks': []};
-      }
+          final result = response['result'] as Map<String, dynamic>?;
+          if (result == null) {
+            return <String, List<MediaItem>>{'artists': [], 'albums': [], 'tracks': []};
+          }
 
-      return {
-        'artists': (result['artists'] as List<dynamic>?)
-                ?.map((item) => Artist.fromJson(item as Map<String, dynamic>))
-                .toList() ??
-            [],
-        'albums': (result['albums'] as List<dynamic>?)
-                ?.map((item) => Album.fromJson(item as Map<String, dynamic>))
-                .toList() ??
-            [],
-        'tracks': (result['tracks'] as List<dynamic>?)
-                ?.map((item) => Track.fromJson(item as Map<String, dynamic>))
-                .toList() ??
-            [],
-      };
-    } catch (e) {
-      _logger.log('Error searching: $e');
-      return {'artists': [], 'albums': [], 'tracks': []};
-    }
+          return <String, List<MediaItem>>{
+            'artists': (result['artists'] as List<dynamic>?)
+                    ?.map((item) => Artist.fromJson(item as Map<String, dynamic>))
+                    .toList() ??
+                [],
+            'albums': (result['albums'] as List<dynamic>?)
+                    ?.map((item) => Album.fromJson(item as Map<String, dynamic>))
+                    .toList() ??
+                [],
+            'tracks': (result['tracks'] as List<dynamic>?)
+                    ?.map((item) => Track.fromJson(item as Map<String, dynamic>))
+                    .toList() ??
+                [],
+          };
+        } catch (e) {
+          _logger.log('Error searching: $e');
+          return <String, List<MediaItem>>{'artists': [], 'albums': [], 'tracks': []};
+        }
+      },
+    ).catchError((e) {
+      _logger.log('Error searching after retries: $e');
+      return <String, List<MediaItem>>{'artists': [], 'albums': [], 'tracks': []};
+    });
   }
 
   // ============================================================================
@@ -693,89 +715,98 @@ class MusicAssistantAPI {
 
   /// Get all available players
   Future<List<Player>> getPlayers() async {
-    try {
-      _logger.log('Fetching available players...');
-      final response = await _sendCommand('players/all');
+    return await RetryHelper.retryNetwork(
+      operation: () async {
+        _logger.log('Fetching available players...');
+        final response = await _sendCommand('players/all');
 
-      final items = response['result'] as List<dynamic>?;
-      if (items == null) return [];
+        final items = response['result'] as List<dynamic>?;
+        if (items == null) return <Player>[];
 
-      final players = items
-          .map((item) => Player.fromJson(item as Map<String, dynamic>))
-          .toList();
+        final players = items
+            .map((item) => Player.fromJson(item as Map<String, dynamic>))
+            .toList();
 
-      _logger.log('Got ${players.length} players');
-      return players;
-    } catch (e) {
-      _logger.log('Error getting players: $e');
-      return [];
-    }
+        _logger.log('Got ${players.length} players');
+        return players;
+      },
+    ).catchError((e) {
+      _logger.log('Error getting players after retries: $e');
+      return <Player>[];
+    });
   }
 
   /// Get player queue
   Future<PlayerQueue?> getQueue(String playerId) async {
-    try {
-      _logger.log('Fetching queue for player: $playerId');
-      final response = await _sendCommand(
-        'player_queues/items',
-        args: {'queue_id': playerId},
-      );
-
-      final result = response['result'];
-      if (result == null) return null;
-
-      // Debug: Log the first queue item to see structure
-      if (result is List && result.isNotEmpty) {
-        _logger.log('🔍 DEBUG: First queue item raw data: ${result[0]}');
-      }
-
-      // The API returns a List of items directly, not a PlayerQueue object
-      final items = <QueueItem>[];
-      for (var i in (result as List<dynamic>)) {
+    return await RetryHelper.retryNetwork(
+      operation: () async {
         try {
-          items.add(QueueItem.fromJson(i as Map<String, dynamic>));
+          _logger.log('Fetching queue for player: $playerId');
+          final response = await _sendCommand(
+            'player_queues/items',
+            args: {'queue_id': playerId},
+          );
+
+          final result = response['result'];
+          if (result == null) return null;
+
+          // Debug: Log the first queue item to see structure
+          if (result is List && result.isNotEmpty) {
+            _logger.log('🔍 DEBUG: First queue item raw data: ${result[0]}');
+          }
+
+          // The API returns a List of items directly, not a PlayerQueue object
+          final items = <QueueItem>[];
+          for (var i in (result as List<dynamic>)) {
+            try {
+              items.add(QueueItem.fromJson(i as Map<String, dynamic>));
+            } catch (e) {
+              _logger.log('⚠️ Failed to parse queue item: $e');
+              // Continue parsing other items
+            }
+          }
+
+          if (items.isEmpty) {
+            _logger.log('⚠️ Queue is empty or all items failed to parse');
+            return null;
+          }
+
+          // Get the player to find current_index from current_item_id
+          final players = await getPlayers();
+          final player = players.firstWhere(
+            (p) => p.playerId == playerId,
+            orElse: () => Player(
+              playerId: playerId,
+              name: '',
+              available: false,
+              powered: false,
+              state: 'idle',
+            ),
+          );
+
+          // Find current index by matching current_item_id
+          int? currentIndex;
+          if (player.currentItemId != null) {
+            currentIndex = items.indexWhere(
+              (item) => item.queueItemId == player.currentItemId,
+            );
+            if (currentIndex == -1) currentIndex = null;
+          }
+
+          return PlayerQueue(
+            playerId: playerId,
+            items: items,
+            currentIndex: currentIndex ?? 0, // Default to first item if no current item
+          );
         } catch (e) {
-          _logger.log('⚠️ Failed to parse queue item: $e');
-          // Continue parsing other items
+          _logger.log('Error getting queue: $e');
+          return null;
         }
-      }
-
-      if (items.isEmpty) {
-        _logger.log('⚠️ Queue is empty or all items failed to parse');
-        return null;
-      }
-
-      // Get the player to find current_index from current_item_id
-      final players = await getPlayers();
-      final player = players.firstWhere(
-        (p) => p.playerId == playerId,
-        orElse: () => Player(
-          playerId: playerId,
-          name: '',
-          available: false,
-          powered: false,
-          state: 'idle',
-        ),
-      );
-
-      // Find current index by matching current_item_id
-      int? currentIndex;
-      if (player.currentItemId != null) {
-        currentIndex = items.indexWhere(
-          (item) => item.queueItemId == player.currentItemId,
-        );
-        if (currentIndex == -1) currentIndex = null;
-      }
-
-      return PlayerQueue(
-        playerId: playerId,
-        items: items,
-        currentIndex: currentIndex ?? 0, // Default to first item if no current item
-      );
-    } catch (e) {
-      _logger.log('Error getting queue: $e');
+      },
+    ).catchError((e) {
+      _logger.log('Error getting queue after retries: $e');
       return null;
-    }
+    });
   }
 
   /// Play a single track via queue
@@ -803,27 +834,26 @@ class MusicAssistantAPI {
 
   /// Play multiple tracks via queue
   Future<void> playTracks(String playerId, List<Track> tracks, {int? startIndex}) async {
-    try {
-      // Build array of URI strings (not objects!)
-      final mediaUris = tracks.map((track) => _buildTrackUri(track)).toList();
+    return await RetryHelper.retryCritical(
+      operation: () async {
+        // Build array of URI strings (not objects!)
+        final mediaUris = tracks.map((track) => _buildTrackUri(track)).toList();
 
-      _logger.log('Playing ${tracks.length} tracks via queue on player $playerId');
+        _logger.log('Playing ${tracks.length} tracks via queue on player $playerId');
 
-      await _sendCommand(
-        'player_queues/play_media',
-        args: {
-          'queue_id': playerId,
-          'media': mediaUris, // Array of URI strings
-          'option': 'play', // Play immediately
-          if (startIndex != null) 'start_item': startIndex,
-        },
-      );
+        await _sendCommand(
+          'player_queues/play_media',
+          args: {
+            'queue_id': playerId,
+            'media': mediaUris, // Array of URI strings
+            'option': 'play', // Play immediately
+            if (startIndex != null) 'start_item': startIndex,
+          },
+        );
 
-      _logger.log('✓ ${tracks.length} tracks queued successfully');
-    } catch (e) {
-      _logger.log('Error playing tracks: $e');
-      rethrow;
-    }
+        _logger.log('✓ ${tracks.length} tracks queued successfully');
+      },
+    );
   }
 
   /// Build track URI from provider mappings
