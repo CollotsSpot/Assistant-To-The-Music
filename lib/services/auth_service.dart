@@ -9,10 +9,14 @@ class AuthService {
   /// Authenticate with the server and get session cookie
   Future<String?> login(String serverUrl, String username, String password) async {
     try {
-      _logger.log('🔐 Attempting login to $serverUrl');
+      // Check if there's a separate auth server URL configured
+      final authServerUrl = await SettingsService.getAuthServerUrl();
+      final targetUrl = authServerUrl ?? serverUrl;
+
+      _logger.log('🔐 Attempting login to $targetUrl');
 
       // Determine base URL
-      var baseUrl = serverUrl;
+      var baseUrl = targetUrl;
       if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
         baseUrl = 'https://$baseUrl';
       }

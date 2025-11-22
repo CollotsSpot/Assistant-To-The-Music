@@ -2,6 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
   static const String _keyServerUrl = 'server_url';
+  static const String _keyAuthServerUrl = 'auth_server_url';
   static const String _keyWebSocketPort = 'websocket_port';
   static const String _keyAuthToken = 'auth_token';
   static const String _keyUsername = 'username';
@@ -16,6 +17,22 @@ class SettingsService {
   static Future<void> setServerUrl(String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyServerUrl, url);
+  }
+
+  // Get authentication server URL (returns null if not set, meaning use server URL)
+  static Future<String?> getAuthServerUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyAuthServerUrl);
+  }
+
+  // Set authentication server URL (null means use same as server URL)
+  static Future<void> setAuthServerUrl(String? url) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (url == null || url.isEmpty) {
+      await prefs.remove(_keyAuthServerUrl);
+    } else {
+      await prefs.setString(_keyAuthServerUrl, url);
+    }
   }
 
   // Get custom WebSocket port (null means use default logic)

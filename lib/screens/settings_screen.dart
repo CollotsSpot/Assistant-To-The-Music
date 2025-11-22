@@ -16,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _serverUrlController = TextEditingController();
+  final _authServerUrlController = TextEditingController();
   final _wsPortController = TextEditingController();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -33,6 +34,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _loadSettings() async {
     final provider = context.read<MusicAssistantProvider>();
     _serverUrlController.text = provider.serverUrl ?? 'ma.serverscloud.org';
+
+    final authServerUrl = await SettingsService.getAuthServerUrl();
+    if (authServerUrl != null) {
+      _authServerUrlController.text = authServerUrl;
+    }
 
     final wsPort = await SettingsService.getWebSocketPort();
     if (wsPort != null) {
@@ -56,6 +62,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _serverUrlController.dispose();
+    _authServerUrlController.dispose();
     _wsPortController.dispose();
     _usernameController.dispose();
     _passwordController.dispose();
@@ -67,6 +74,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _showError('Please enter a server URL');
       return;
     }
+
+    // Save auth server URL setting
+    final authServerUrl = _authServerUrlController.text.trim();
+    await SettingsService.setAuthServerUrl(authServerUrl.isNotEmpty ? authServerUrl : null);
 
     // Save WebSocket port setting
     int? wsPort;
@@ -271,6 +282,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 prefixIcon: const Icon(
                   Icons.dns_rounded,
+                  color: Colors.white54,
+                ),
+              ),
+              enabled: !_isConnecting,
+            ),
+
+            const SizedBox(height: 24),
+
+            // Auth Server URL input (for Authelia)
+            const Text(
+              'Auth Server URL (Optional)',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Only needed if using Authelia on a separate domain (e.g., auth.serverscloud.org)',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            TextField(
+              controller: _authServerUrlController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'e.g., auth.serverscloud.org',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white12,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                prefixIcon: const Icon(
+                  Icons.security_rounded,
                   color: Colors.white54,
                 ),
               ),
