@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../services/music_assistant_api.dart';
 import '../services/settings_service.dart';
+import '../services/auth_service.dart';
+import '../services/debug_logger.dart';
 import 'debug_log_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,8 +17,12 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _serverUrlController = TextEditingController();
   final _wsPortController = TextEditingController();
-  final _authTokenController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  final _logger = DebugLogger();
   bool _isConnecting = false;
+  bool _requiresAuth = false;
 
   @override
   void initState() {
@@ -33,9 +39,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _wsPortController.text = wsPort.toString();
     }
 
-    final authToken = await SettingsService.getAuthToken();
-    if (authToken != null) {
-      _authTokenController.text = authToken;
+    final username = await SettingsService.getUsername();
+    if (username != null) {
+      _usernameController.text = username;
+      setState(() {
+        _requiresAuth = true;
+      });
+    }
+
+    final password = await SettingsService.getPassword();
+    if (password != null) {
+      _passwordController.text = password;
     }
   }
 
@@ -43,7 +57,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void dispose() {
     _serverUrlController.dispose();
     _wsPortController.dispose();
-    _authTokenController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -64,18 +79,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     await SettingsService.setWebSocketPort(wsPort);
 
-    // Save auth token
-    await SettingsService.setAuthToken(
-      _authTokenController.text.trim().isNotEmpty
-        ? _authTokenController.text.trim()
-        : null
-    );
-
     setState(() {
       _isConnecting = true;
     });
 
     try {
+      // Attempt authentication if username/password provided
+      if (_usernameController.text.trim().isNotEmpty &&
+          _passwordController.text.trim().isNotEmpty) {
+        _logger.log('🔐 Attempting login with credentials...');
+
+        final token = await _authService.login(
+          _serverUrlController.text,
+          _usernameController.text.trim(),
+          _passwordController.text.trim(),
+        );
+
+        if (token != null) {
+          // Save credentials for future use
+          await SettingsService.setUsername(_usernameController.text.trim());
+          await SettingsService.setPassword(_passwordController.text.trim());
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('✓ Authentication successful!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        } else {
+          _showError('Authentication failed. Please check your credentials.');
+          setState(() {
+            _isConnecting = false;
+          });
+          return;
+        }
+      }
+
+      // Connect to Music Assistant
       final provider = context.read<MusicAssistantProvider>();
       await provider.connectToServer(_serverUrlController.text);
 
@@ -279,45 +321,98 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 24),
 
-            // Authentication Token input
-            const Text(
-              'Authentication Token (Optional)',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            // Authentication section header
+            Row(
+              children: [
+                const Text(
+                  'Authentication (Optional)',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Checkbox(
+                  value: _requiresAuth,
+                  onChanged: (value) {
+                    setState(() {
+                      _requiresAuth = value ?? false;
+                      if (!_requiresAuth) {
+                        _usernameController.clear();
+                        _passwordController.clear();
+                      }
+                    });
+                  },
+                  fillColor: MaterialStateProperty.all(Colors.white),
+                  checkColor: const Color(0xFF1a1a1a),
+                ),
+                const Text(
+                  'Required',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             const Text(
-              'Required if your server uses authentication (e.g., Authelia). Leave empty if not needed.',
+              'Required if your server uses authentication (e.g., Authelia, HTTP Basic Auth)',
               style: TextStyle(
                 color: Colors.white54,
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 16),
 
-            TextField(
-              controller: _authTokenController,
-              style: const TextStyle(color: Colors.white),
-              obscureText: true,
-              decoration: InputDecoration(
-                hintText: 'Enter authentication token or session cookie',
-                hintStyle: const TextStyle(color: Colors.white38),
-                filled: true,
-                fillColor: Colors.white12,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
+            if (_requiresAuth) ...[
+              const SizedBox(height: 16),
+
+              // Username field
+              TextField(
+                controller: _usernameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Username',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white12,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.person_outline_rounded,
+                    color: Colors.white54,
+                  ),
                 ),
-                prefixIcon: const Icon(
-                  Icons.vpn_key_rounded,
-                  color: Colors.white54,
-                ),
+                enabled: !_isConnecting,
               ),
-              enabled: !_isConnecting,
-            ),
+
+              const SizedBox(height: 12),
+
+              // Password field
+              TextField(
+                controller: _passwordController,
+                style: const TextStyle(color: Colors.white),
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  hintStyle: const TextStyle(color: Colors.white38),
+                  filled: true,
+                  fillColor: Colors.white12,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.lock_outline_rounded,
+                    color: Colors.white54,
+                  ),
+                ),
+                enabled: !_isConnecting,
+              ),
+            ],
 
             const SizedBox(height: 24),
 

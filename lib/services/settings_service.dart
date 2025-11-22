@@ -4,6 +4,8 @@ class SettingsService {
   static const String _keyServerUrl = 'server_url';
   static const String _keyWebSocketPort = 'websocket_port';
   static const String _keyAuthToken = 'auth_token';
+  static const String _keyUsername = 'username';
+  static const String _keyPassword = 'password';
   static const String _keyDefaultServer = 'ma.serverscloud.org';
 
   static Future<String> getServerUrl() async {
@@ -45,6 +47,38 @@ class SettingsService {
       await prefs.remove(_keyAuthToken);
     } else {
       await prefs.setString(_keyAuthToken, token);
+    }
+  }
+
+  // Get username for authentication
+  static Future<String?> getUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyUsername);
+  }
+
+  // Set username for authentication
+  static Future<void> setUsername(String? username) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (username == null || username.isEmpty) {
+      await prefs.remove(_keyUsername);
+    } else {
+      await prefs.setString(_keyUsername, username);
+    }
+  }
+
+  // Get password for authentication
+  static Future<String?> getPassword() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyPassword);
+  }
+
+  // Set password for authentication
+  static Future<void> setPassword(String? password) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (password == null || password.isEmpty) {
+      await prefs.remove(_keyPassword);
+    } else {
+      await prefs.setString(_keyPassword, password);
     }
   }
 

@@ -51,11 +51,14 @@ class AudioPlayerService {
     // Load auth token if not already loaded
     _authToken ??= await SettingsService.getAuthToken();
 
-    if (_authToken != null && _authToken!.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $_authToken';
-      _logger.log('🔑 Using authorization token for stream request');
+    if (_authToken != null && _authToken!.isNotEmpty && _authToken != 'authenticated') {
+      // Use as session cookie
+      headers['Cookie'] = 'authelia_session=$_authToken';
+      _logger.log('🔑 Using session cookie for stream request');
+    } else if (_authToken == 'authenticated') {
+      _logger.log('✓ Authenticated (no cookie needed)');
     } else {
-      _logger.log('⚠️ No auth token configured - stream may fail with 401');
+      _logger.log('ℹ️ No authentication configured');
     }
 
     return headers;
