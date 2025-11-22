@@ -5,6 +5,7 @@ import '../widgets/player_selector.dart';
 import '../widgets/album_row.dart';
 import '../widgets/library_stats.dart';
 import 'settings_screen.dart';
+import 'search_screen.dart';
 
 class NewHomeScreen extends StatelessWidget {
   const NewHomeScreen({super.key});
@@ -27,8 +28,19 @@ class NewHomeScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        actions: const [
-          PlayerSelector(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
+            },
+          ),
+          const PlayerSelector(),
         ],
       ),
       body: SafeArea(

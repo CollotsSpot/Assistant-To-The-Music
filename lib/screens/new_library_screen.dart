@@ -6,6 +6,7 @@ import 'library_artists_screen.dart';
 import 'library_albums_screen.dart';
 import 'library_tracks_screen.dart';
 import 'settings_screen.dart';
+import 'search_screen.dart';
 
 class NewLibraryScreen extends StatelessWidget {
   const NewLibraryScreen({super.key});
@@ -28,8 +29,19 @@ class NewLibraryScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        actions: const [
-          PlayerSelector(),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
+            },
+          ),
+          const PlayerSelector(),
         ],
       ),
       body: !provider.isConnected
