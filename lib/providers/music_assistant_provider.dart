@@ -139,9 +139,9 @@ class MusicAssistantProvider with ChangeNotifier {
 
       // Load artists, albums, and tracks in parallel
       final results = await Future.wait([
-        _api!.getArtists(limit: 100),
-        _api!.getAlbums(limit: 100),
-        _api!.getTracks(limit: 100),
+        _api!.getArtists(limit: 500),
+        _api!.getAlbums(limit: 500),
+        _api!.getTracks(limit: 500),
       ]);
 
       _artists = results[0] as List<Artist>;
@@ -606,6 +606,29 @@ class MusicAssistantProvider with ChangeNotifier {
   // ============================================================================
   // END PLAYER SELECTION
   // ============================================================================
+
+  /// Check connection and reconnect if needed (called when app resumes)
+  Future<void> checkAndReconnect() async {
+    if (_api == null || _serverUrl == null) {
+      _logger.log('⚠️ No API or server URL configured');
+      return;
+    }
+
+    // Check if we're disconnected
+    if (_connectionState != MAConnectionState.connected) {
+      _logger.log('🔄 App resumed and disconnected - attempting reconnect...');
+      try {
+        await connectToServer(_serverUrl!);
+        _logger.log('✅ Reconnected successfully');
+      } catch (e) {
+        _logger.log('❌ Reconnection failed: $e');
+      }
+    } else {
+      _logger.log('✓ Already connected, no reconnection needed');
+      // Even if connected, refresh player state
+      await refreshPlayers();
+    }
+  }
 
   @override
   void dispose() {

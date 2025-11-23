@@ -26,13 +26,48 @@ void main() {
   runApp(const MusicAssistantApp());
 }
 
-class MusicAssistantApp extends StatelessWidget {
+class MusicAssistantApp extends StatefulWidget {
   const MusicAssistantApp({super.key});
 
   @override
+  State<MusicAssistantApp> createState() => _MusicAssistantAppState();
+}
+
+class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindingObserver {
+  late MusicAssistantProvider _provider;
+
+  @override
+  void initState() {
+    super.initState();
+    _provider = MusicAssistantProvider();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    if (state == AppLifecycleState.resumed) {
+      // App came back to foreground - check connection and reconnect if needed
+      print('📱 App resumed - checking WebSocket connection...');
+      _provider.checkAndReconnect();
+    } else if (state == AppLifecycleState.paused) {
+      print('📱 App paused (backgrounded)');
+    } else if (state == AppLifecycleState.detached) {
+      print('📱 App detached (being destroyed)');
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => MusicAssistantProvider(),
+    return ChangeNotifierProvider.value(
+      value: _provider,
       child: MaterialApp(
         title: 'Music Assistant',
         debugShowCheckedModeBanner: false,

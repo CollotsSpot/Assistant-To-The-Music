@@ -362,27 +362,34 @@ class MusicAssistantAPI {
     }
   }
 
-  /// Get recently played albums
+  /// Get recently added albums
   Future<List<Album>> getRecentAlbums({int limit = 10}) async {
     try {
-      _logger.log('Fetching recently played albums (limit=$limit)');
+      _logger.log('Fetching recently added albums (limit=$limit)');
       final response = await _sendCommand(
         'music/albums/library_items',
         args: {
           'limit': limit,
-          'order_by': 'last_played',
+          'sort': 'timestamp_added',  // Sort by when added to library
+          'order': 'desc',             // Newest first
         },
       );
 
       final items = response['result'] as List<dynamic>?;
-      if (items == null) return [];
+      if (items == null) {
+        _logger.log('⚠️ No items returned for recent albums');
+        return [];
+      }
 
-      _logger.log('Got ${items.length} recent albums');
+      _logger.log('✅ Got ${items.length} recent albums');
+      if (items.isNotEmpty) {
+        _logger.log('   First album: ${items[0]['name']} by ${items[0]['artists']?[0]?['name'] ?? 'Unknown'}');
+      }
       return items
           .map((item) => Album.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
-      _logger.log('Error getting recent albums: $e');
+      _logger.log('❌ Error getting recent albums: $e');
       return [];
     }
   }
