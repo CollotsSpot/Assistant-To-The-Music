@@ -85,8 +85,6 @@ class _AlbumCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (context) => AlbumDetailsScreen(
               album: album,
-              provider: album.provider,
-              itemId: album.itemId,
             ),
           ),
         );
