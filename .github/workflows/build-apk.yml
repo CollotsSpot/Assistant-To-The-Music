@@ -34,13 +34,29 @@ jobs:
 
       - name: Get dependencies
         run: flutter pub get
-        
+
       - name: Generate launcher icons
         run: flutter pub run flutter_launcher_icons
-        
+
       - name: Analyze code
         run: flutter analyze
         continue-on-error: true
+
+      - name: Create signing keystore
+        run: |
+          # Create a keystore for signing (valid for 10000 days)
+          keytool -genkey -v -keystore android/app/upload-keystore.jks \
+            -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -alias upload -dname "CN=Amass, OU=HomeServer, O=Personal, L=Home, S=Home, C=US"
+
+          # Create key.properties file
+          cat > android/key.properties << EOF
+          storePassword=android
+          keyPassword=android
+          keyAlias=upload
+          storeFile=upload-keystore.jks
+          EOF
 
       - name: Build APK
         run: flutter build apk --release

@@ -261,33 +261,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 24),
 
-              // Authentication toggle
-              Row(
-                children: [
-                  Checkbox(
-                    value: _requiresAuth,
-                    onChanged: _isConnecting ? null : (value) {
-                      setState(() {
-                        _requiresAuth = value ?? false;
-                      });
-                    },
-                    fillColor: WidgetStateProperty.resolveWith((states) {
-                      if (states.contains(WidgetState.disabled)) {
-                        return Colors.white24;
-                      }
-                      return states.contains(WidgetState.selected)
-                          ? Colors.white
-                          : Colors.white54;
-                    }),
-                    checkColor: const Color(0xFF1a1a1a),
-                  ),
-                  const Text(
-                    'Requires authentication',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
-                ],
-              ),
-
               // Authentication fields
               if (_requiresAuth) ...[
                 const SizedBox(height: 16),

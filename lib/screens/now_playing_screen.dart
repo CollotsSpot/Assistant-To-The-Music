@@ -257,12 +257,20 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         _seekPosition = value;
                       });
                     },
+                    onChangeStart: (value) {
+                      setState(() {
+                        _seekPosition = value;
+                      });
+                    },
                     onChangeEnd: (value) async {
                       final targetPosition = value.round();
                       print('🎯 Seek slider released at $targetPosition seconds');
                       try {
                         await maProvider.seek(selectedPlayer.playerId, targetPosition);
                         print('✅ Seek command completed');
+
+                        // Wait briefly for server to update position
+                        await Future.delayed(const Duration(milliseconds: 200));
                       } catch (e) {
                         print('❌ Error seeking: $e');
                         if (mounted) {
