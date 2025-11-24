@@ -28,9 +28,46 @@ This shows you:
 - Whether they're available or unavailable
 - Their current state (idle/playing/paused)
 
-**Note**: Ghost players are likely marked as `available: false`, which is why they don't appear in the Music Assistant web UI.
+**Note**: Ghost players are marked as `available: true` but are builtin_player type with default_name "Music Assistant Mobile". They exist in your `settings.json` but don't show in the web UI because they're orphaned mobile players.
 
-## How to Clean Up (Music Assistant Web UI)
+## Findings from Your Server
+
+Your Music Assistant logs show:
+- **26 ghost "Music Assistant Mobile" players** found in `settings.json`
+- Created between Nov 22-23, 2025 (during app development/testing)
+- All are `provider: builtin_player` with `available: true`
+- Player IDs are UUIDs like `202f4c01-abbf-4a46-83f8-9954570e7e50`
+
+These players are in your settings but not visible in the UI, which is why manual cleanup is needed.
+
+## Automated Cleanup (Recommended)
+
+A cleanup script has been created for your server:
+
+```bash
+# Run the cleanup script
+cd /home/home-server/Amass
+./cleanup_ghost_players.sh
+
+# It will:
+# 1. Show you all 26 ghost players
+# 2. Ask for confirmation
+# 3. Backup settings.json
+# 4. Remove ghost players
+# 5. Tell you to restart Music Assistant
+```
+
+After running the script, restart Music Assistant:
+```bash
+docker restart music_assistant
+# Or if using docker-compose:
+cd /home/home-server/docker/music-assistant
+docker compose restart
+```
+
+## Manual Cleanup (Advanced)
+
+If you prefer manual cleanup:
 
 ### Option 1: Via Web UI Settings
 
