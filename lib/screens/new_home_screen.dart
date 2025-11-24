@@ -12,8 +12,6 @@ class NewHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maProvider = context.watch<MusicAssistantProvider>();
-
     return Scaffold(
       backgroundColor: const Color(0xFF1a1a1a),
       appBar: AppBar(
@@ -46,9 +44,13 @@ class NewHomeScreen extends StatelessWidget {
         ],
       ),
       body: SafeArea(
-        child: !maProvider.isConnected
-            ? _buildDisconnectedView(context, maProvider)
-            : _buildConnectedView(context, maProvider),
+        child: Consumer<MusicAssistantProvider>(
+          builder: (context, maProvider, child) {
+            return !maProvider.isConnected
+                ? _buildDisconnectedView(context, maProvider)
+                : _buildConnectedView(context, maProvider);
+          },
+        ),
       ),
     );
   }

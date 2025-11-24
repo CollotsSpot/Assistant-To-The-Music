@@ -86,11 +86,12 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final maProvider = context.watch<MusicAssistantProvider>();
-    final selectedPlayer = maProvider.selectedPlayer;
-    final currentTrack = maProvider.currentTrack;
+    return Consumer<MusicAssistantProvider>(
+      builder: (context, maProvider, child) {
+        final selectedPlayer = maProvider.selectedPlayer;
+        final currentTrack = maProvider.currentTrack;
 
-    if (currentTrack == null || selectedPlayer == null) {
+        if (currentTrack == null || selectedPlayer == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF1a1a1a),
         appBar: AppBar(
@@ -392,7 +393,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
             ],
           ),
         ),
-      ),
+        );
+      },
     );
   }
 

@@ -411,33 +411,31 @@ class MusicAssistantProvider with ChangeNotifier {
           _playersLastFetched != null &&
           _availablePlayers.isNotEmpty &&
           now.difference(_playersLastFetched!) < _playersCacheDuration) {
-        _logger.log('Using cached player list (${_availablePlayers.length} players)');
         return;
       }
 
-      _logger.log('Fetching fresh player list...');
       final allPlayers = await getPlayers();
 
       // Filter out leftover "Music Assistant Mobile" players from old app builds
       // These were registered during development but are no longer used
       // Keep "this device" (web UI player) and all other legitimate players
+      int filteredCount = 0;
       _availablePlayers = allPlayers.where((player) {
         final nameLower = player.name.toLowerCase();
         // Exclude players that are exactly "music assistant mobile" or similar
         // but keep "this device" and other players
         if (nameLower.contains('music assistant mobile')) {
-          _logger.log('Filtering out leftover player: ${player.name}');
+          filteredCount++;
           return false;
         }
         return true;
       }).toList();
 
       _playersLastFetched = DateTime.now();
-      _logger.log('Loaded ${_availablePlayers.length} players (filtered from ${allPlayers.length} total)');
 
-      // Log each player for debugging
-      for (final player in _availablePlayers) {
-        _logger.log('  - ${player.name} (${player.playerId}) - available: ${player.available}, state: ${player.state}');
+      // Only log summary, not every single player
+      if (filteredCount > 0) {
+        _logger.log('Loaded ${_availablePlayers.length} players (filtered out $filteredCount leftover players from ${allPlayers.length} total)');
       }
 
       if (_availablePlayers.isNotEmpty) {
@@ -484,21 +482,23 @@ class MusicAssistantProvider with ChangeNotifier {
         _logger.log('⚠️ No players available');
       }
 
-      notifyListeners();
+      // Don't call notifyListeners here - selectPlayer already does it
     } catch (e) {
       ErrorHandler.logError('Load and select players', e);
     }
   }
 
   /// Select a player for playback
-  void selectPlayer(Player player) {
+  void selectPlayer(Player player, {bool skipNotify = false}) {
     _selectedPlayer = player;
     _logger.log('Selected player: ${player.name} (${player.playerId})');
 
     // Start polling for player state
     _startPlayerStatePolling();
 
-    notifyListeners();
+    if (!skipNotify) {
+      notifyListeners();
+    }
   }
 
   /// Start polling for selected player's current state
@@ -507,8 +507,8 @@ class MusicAssistantProvider with ChangeNotifier {
 
     if (_selectedPlayer == null) return;
 
-    // Poll every 2 seconds
-    _playerStateTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+    // Poll every 5 seconds for better performance
+    _playerStateTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _updatePlayerState();
     });
 
@@ -521,8 +521,23 @@ class MusicAssistantProvider with ChangeNotifier {
     if (_selectedPlayer == null || _api == null) return;
 
     try {
-      // Refresh players list to get latest player state
-      await refreshPlayers();
+      bool stateChanged = false;
+
+      // Fetch only the selected player's state instead of all players
+      final allPlayers = await getPlayers();
+      final updatedPlayer = allPlayers.firstWhere(
+        (p) => p.playerId == _selectedPlayer!.playerId,
+        orElse: () => _selectedPlayer!,
+      );
+
+      // Check if player state actually changed
+      if (updatedPlayer.state != _selectedPlayer!.state ||
+          updatedPlayer.volumeLevel != _selectedPlayer!.volumeLevel ||
+          updatedPlayer.volumeMuted != _selectedPlayer!.volumeMuted ||
+          updatedPlayer.available != _selectedPlayer!.available) {
+        _selectedPlayer = updatedPlayer;
+        stateChanged = true;
+      }
 
       // Only show tracks if player is available and not idle
       final shouldShowTrack = _selectedPlayer!.available &&
@@ -532,7 +547,10 @@ class MusicAssistantProvider with ChangeNotifier {
         // Clear track if player is unavailable or idle
         if (_currentTrack != null) {
           _currentTrack = null;
-          _logger.log('🗑️ Cleared track - player unavailable or idle (state: ${_selectedPlayer!.state}, available: ${_selectedPlayer!.available})');
+          stateChanged = true;
+        }
+
+        if (stateChanged) {
           notifyListeners();
         }
         return;
@@ -542,22 +560,24 @@ class MusicAssistantProvider with ChangeNotifier {
       final queue = await getQueue(_selectedPlayer!.playerId);
 
       if (queue != null && queue.currentItem != null) {
-        _currentTrack = queue.currentItem!.track;
-        _logger.log('✅ Current track updated: ${_currentTrack!.name}');
-        notifyListeners();
-      } else {
-        if (queue == null) {
-          _logger.log('⚠️ Queue is null for player ${_selectedPlayer!.playerId}');
-        } else if (queue.currentItem == null) {
-          _logger.log('⚠️ Queue currentItem is null (currentIndex: ${queue.currentIndex}, items: ${queue.items.length})');
+        // Only update if track actually changed
+        if (_currentTrack == null ||
+            _currentTrack!.uri != queue.currentItem!.track.uri ||
+            _currentTrack!.name != queue.currentItem!.track.name) {
+          _currentTrack = queue.currentItem!.track;
+          stateChanged = true;
         }
-
+      } else {
         if (_currentTrack != null) {
           // Clear current track if queue is empty
           _currentTrack = null;
-          _logger.log('🗑️ Cleared current track');
-          notifyListeners();
+          stateChanged = true;
         }
+      }
+
+      // Only notify if something actually changed
+      if (stateChanged) {
+        notifyListeners();
       }
     } catch (e) {
       _logger.log('❌ Error updating player state: $e');
@@ -601,20 +621,35 @@ class MusicAssistantProvider with ChangeNotifier {
 
   /// Refresh the list of available players
   Future<void> refreshPlayers() async {
+    final previousState = _selectedPlayer?.state;
+    final previousVolume = _selectedPlayer?.volumeLevel;
+
     await _loadAndSelectPlayers(forceRefresh: true);
 
     // Update the selected player with fresh data
+    bool stateChanged = false;
     if (_selectedPlayer != null && _availablePlayers.isNotEmpty) {
       try {
         final updatedPlayer = _availablePlayers.firstWhere(
           (p) => p.playerId == _selectedPlayer!.playerId,
         );
+
+        // Check if state actually changed
+        if (updatedPlayer.state != previousState ||
+            updatedPlayer.volumeLevel != previousVolume) {
+          stateChanged = true;
+        }
+
         _selectedPlayer = updatedPlayer;
-        _logger.log('Updated selected player state: ${updatedPlayer.name} - ${updatedPlayer.state}');
       } catch (e) {
         // Selected player no longer available
-        _logger.log('Selected player no longer in list');
+        stateChanged = true;
       }
+    }
+
+    // Only notify if state changed
+    if (stateChanged) {
+      notifyListeners();
     }
   }
 

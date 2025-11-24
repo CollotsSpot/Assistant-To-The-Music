@@ -12,18 +12,19 @@ class MiniPlayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maProvider = context.watch<MusicAssistantProvider>();
-    final selectedPlayer = maProvider.selectedPlayer;
-    final currentTrack = maProvider.currentTrack;
+    return Consumer<MusicAssistantProvider>(
+      builder: (context, maProvider, child) {
+        final selectedPlayer = maProvider.selectedPlayer;
+        final currentTrack = maProvider.currentTrack;
 
-    // Don't show mini player if no track is playing or no player selected
-    if (currentTrack == null || selectedPlayer == null) {
-      return const SizedBox.shrink();
-    }
+        // Don't show mini player if no track is playing or no player selected
+        if (currentTrack == null || selectedPlayer == null) {
+          return const SizedBox.shrink();
+        }
 
-    final imageUrl = maProvider.getImageUrl(currentTrack, size: 96);
+        final imageUrl = maProvider.getImageUrl(currentTrack, size: 96);
 
-    return GestureDetector(
+        return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
@@ -239,7 +240,8 @@ class MiniPlayer extends StatelessWidget {
             ),
           ],
         ),
-      ),
+        );
+      },
     );
   }
 }
