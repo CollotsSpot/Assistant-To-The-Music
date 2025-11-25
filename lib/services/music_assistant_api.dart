@@ -969,6 +969,28 @@ class MusicAssistantAPI {
     );
   }
 
+  /// Play radio based on a track (generates similar tracks)
+  Future<void> playRadio(String playerId, Track track) async {
+    return await RetryHelper.retryCritical(
+      operation: () async {
+        final trackUri = _buildTrackUri(track);
+        _logger.log('Playing radio based on track: $trackUri on player $playerId');
+
+        await _sendCommand(
+          'player_queues/play_media',
+          args: {
+            'queue_id': playerId,
+            'media': [trackUri],
+            'option': 'replace',
+            'radio_mode': true, // Enable radio mode for similar tracks
+          },
+        );
+
+        _logger.log('✓ Radio mode started successfully');
+      },
+    );
+  }
+
   /// Build track URI from provider mappings
   String _buildTrackUri(Track track) {
     // Use provider mappings to get the actual provider instance

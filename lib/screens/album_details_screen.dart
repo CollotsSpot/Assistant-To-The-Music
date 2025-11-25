@@ -15,12 +15,13 @@ class AlbumDetailsScreen extends StatefulWidget {
   State<AlbumDetailsScreen> createState() => _AlbumDetailsScreenState();
 }
 
-class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
+class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTickerProviderStateMixin {
   List<Track> _tracks = [];
   bool _isLoading = true;
   bool _isFavorite = false;
   ColorScheme? _lightColorScheme;
   ColorScheme? _darkColorScheme;
+  int? _expandedTrackIndex;
 
   @override
   void initState() {
@@ -363,56 +364,267 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
                   final track = _tracks[index];
-                  return ListTile(
-                    leading: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${track.position ?? index + 1}',
-                          style: TextStyle(
-                            color: colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
+                  final isExpanded = _expandedTrackIndex == index;
+
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ListTile(
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: colorScheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Center(
+                            child: Text(
+                              '${track.position ?? index + 1}',
+                              style: TextStyle(
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ),
+                        title: Text(
+                          track.name,
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colorScheme.onSurface,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: Text(
+                          track.artistsString,
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: track.duration != null
+                            ? Text(
+                                _formatDuration(track.duration!),
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                ),
+                              )
+                            : null,
+                        onTap: () {
+                          setState(() {
+                            _expandedTrackIndex = isExpanded ? null : index;
+                          });
+                        },
                       ),
-                    ),
-                    title: Text(
-                      track.name,
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.onSurface,
-                        fontWeight: FontWeight.w500,
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        child: isExpanded
+                            ? Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: FilledButton.tonal(
+                                          onPressed: () => _showPlayAlbumFromHereMenu(context, index),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: colorScheme.secondaryContainer,
+                                            foregroundColor: colorScheme.onSecondaryContainer,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Text('Play album from here'),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 48,
+                                        child: FilledButton.tonal(
+                                          onPressed: () => _showPlayRadioMenu(context, index),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: colorScheme.tertiaryContainer,
+                                            foregroundColor: colorScheme.onTertiaryContainer,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                          ),
+                                          child: const Text('Play radio'),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : const SizedBox.shrink(),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: Text(
-                      track.artistsString,
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: track.duration != null
-                        ? Text(
-                            _formatDuration(track.duration!),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.5),
-                            ),
-                          )
-                        : null,
-                    onTap: () => _playTrack(index),
+                    ],
                   );
                 },
                 childCount: _tracks.length,
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  void _showPlayAlbumFromHereMenu(BuildContext context, int startIndex) {
+    final maProvider = context.read<MusicAssistantProvider>();
+    final players = maProvider.availablePlayers;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              'Play on...',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (players.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('No players available'),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: players.length,
+                  itemBuilder: (context, index) {
+                    final player = players[index];
+                    return ListTile(
+                      leading: Icon(
+                        Icons.speaker,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      title: Text(player.name),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        // Set this as the active player
+                        maProvider.selectPlayer(player);
+
+                        try {
+                          // Play album from this track onwards
+                          await maProvider.playTracks(
+                            player.playerId,
+                            _tracks,
+                            startIndex: startIndex,
+                          );
+
+                          // Close the expanded state
+                          setState(() {
+                            _expandedTrackIndex = null;
+                          });
+
+                          // Close the album screen
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          print('Error playing album from track: $e');
+                          _showError('Failed to play album: $e');
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 32),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPlayRadioMenu(BuildContext context, int trackIndex) {
+    final maProvider = context.read<MusicAssistantProvider>();
+    final players = maProvider.availablePlayers;
+    final track = _tracks[trackIndex];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              'Play on...',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            if (players.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Text('No players available'),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: players.length,
+                  itemBuilder: (context, index) {
+                    final player = players[index];
+                    return ListTile(
+                      leading: Icon(
+                        Icons.speaker,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                      title: Text(player.name),
+                      onTap: () async {
+                        Navigator.pop(context);
+                        // Set this as the active player
+                        maProvider.selectPlayer(player);
+
+                        try {
+                          // Play radio based on this track
+                          await maProvider.playRadio(
+                            player.playerId,
+                            track,
+                          );
+
+                          // Close the expanded state
+                          setState(() {
+                            _expandedTrackIndex = null;
+                          });
+
+                          // Close the album screen
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        } catch (e) {
+                          print('Error playing radio: $e');
+                          _showError('Failed to play radio: $e');
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
     );
   }

@@ -289,6 +289,18 @@ class MusicAssistantProvider with ChangeNotifier {
     }
   }
 
+  Future<void> playRadio(String playerId, Track track) async {
+    try {
+      await _api?.playRadio(playerId, track);
+    } catch (e) {
+      final errorInfo = ErrorHandler.handleError(e, context: 'Play radio');
+      _error = errorInfo.userMessage;
+      ErrorHandler.logError('Play radio', e);
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<String?> getCurrentStreamUrl(String playerId) async {
     return await _api?.getCurrentStreamUrl(playerId);
   }
