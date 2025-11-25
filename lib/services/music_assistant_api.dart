@@ -407,14 +407,12 @@ class MusicAssistantAPI {
   Future<List<Album>> getRecentAlbums({int limit = 10}) async {
     try {
       _logger.log('Fetching recently played albums (limit=$limit)');
-      // Note: API filtering/sorting might be unreliable on some server versions
-      // We request sorting by timestamp_played
+      // Fetch all albums to sort client-side as server sorting might be unreliable
       final response = await _sendCommand(
         'music/albums/library_items',
         args: {
-          'limit': limit,
-          'sort': 'timestamp_played',
-          'order': 'desc',
+          // Fetch more items to ensure we find the recently played ones
+          'limit': 100, 
         },
       );
 
@@ -424,11 +422,24 @@ class MusicAssistantAPI {
         return [];
       }
 
-      _logger.log('✅ Got ${items.length} recent albums');
-      if (items.isNotEmpty) {
-        _logger.log('   First album: ${items[0]['name']} by ${items[0]['artists']?[0]?['name'] ?? 'Unknown'}');
+      // Sort client-side by timestamp_played or last_played
+      items.sort((a, b) {
+        // Try to find timestamp in different possible locations
+        final tA = (a['timestamp_played'] ?? a['last_played'] ?? a['metadata']?['timestamp_played'] ?? a['metadata']?['last_played'] ?? 0) as num;
+        final tB = (b['timestamp_played'] ?? b['last_played'] ?? b['metadata']?['timestamp_played'] ?? b['metadata']?['last_played'] ?? 0) as num;
+        return tB.compareTo(tA); // Descending
+      });
+
+      _logger.log('✅ Got ${items.length} albums, sorting by timestamp_played');
+      
+      // Take top 'limit'
+      final topItems = items.take(limit).toList();
+
+      if (topItems.isNotEmpty) {
+        _logger.log('   First recent album: ${topItems[0]['name']}');
       }
-      return items
+      
+      return topItems
           .map((item) => Album.fromJson(item as Map<String, dynamic>))
           .toList();
     } catch (e) {
