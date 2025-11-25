@@ -187,8 +187,13 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 60),
 
               // Logo
-              const Center(
-                child: LogoText(fontSize: 32),
+              Center(
+                child: Image.asset(
+                  'assets/images/attm_logo.png',
+                  height: 80,
+                  fit: BoxFit.contain,
+                  color: colorScheme.onBackground, // Tints the logo to match theme
+                ),
               ),
 
               const SizedBox(height: 16),

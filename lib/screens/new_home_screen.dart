@@ -20,9 +20,15 @@ class NewHomeScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Padding(
-          padding: EdgeInsets.only(left: 8.0, top: 8.0), // Reverted left, added top padding
-          child: LogoText(fontSize: 24), // Reverted size
+        title: Padding(
+          padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+          child: Image.asset(
+            'assets/images/attm_logo.png',
+            height: 32,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            color: colorScheme.onBackground, // Tints the logo to match theme text color
+          ),
         ),
         titleSpacing: 0,
         centerTitle: false,
