@@ -84,80 +84,10 @@ class SettingsScreen extends StatefulWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // Layout Debugger
-            ListenableBuilder(
-              listenable: LayoutDebug(),
-              builder: (context, _) {
-                final debug = LayoutDebug();
-                return ExpansionTile(
-                  title: Text(
-                    'Layout Debugger',
-                    style: TextStyle(color: colorScheme.onSurface),
-                  ),
-                  collapsedIconColor: colorScheme.onSurface,
-                  iconColor: colorScheme.primary,
-                  children: [
-                    _buildSlider(
-                      'Left Padding',
-                      debug.logoPaddingLeft,
-                      0, 100,
-                      (v) => debug.update(left: v),
-                      colorScheme,
-                    ),
-                    _buildSlider(
-                      'Top Padding',
-                      debug.logoPaddingTop,
-                      0, 100,
-                      (v) => debug.update(top: v),
-                      colorScheme,
-                    ),
-                    _buildSlider(
-                      'Bottom Padding',
-                      debug.logoPaddingBottom,
-                      0, 100,
-                      (v) => debug.update(bottom: v),
-                      colorScheme,
-                    ),
-                    _buildSlider(
-                      'Logo Size',
-                      debug.logoSize,
-                      10, 200,
-                      (v) => debug.update(size: v),
-                      colorScheme,
-                    ),
-                  ],
-                );
-              },\n            ),
-            const SizedBox(height: 100), // Extra space at bottom
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSlider(String label, double value, double min, double max, ValueChanged<double> onChanged, ColorScheme colorScheme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Text(
-            '$label: ${value.toStringAsFixed(1)}',
-            style: TextStyle(color: colorScheme.onSurface),
-          ),
-        ),
-        Slider(
-          value: value,
-          min: min,
-          max: max,
-          onChanged: onChanged,
-          activeColor: colorScheme.primary,
-          inactiveColor: colorScheme.surfaceVariant,
-        ),
-      ],
     );
   }
 
