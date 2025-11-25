@@ -48,7 +48,7 @@ jobs:
           keytool -genkey -v -keystore android/app/upload-keystore.jks \
             -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass android -keypass android \
-            -alias upload -dname "CN=Amass, OU=HomeServer, O=Personal, L=Home, S=Home, C=US"
+            -alias upload -dname "CN=AssistantToTheMusic, OU=HomeServer, O=Personal, L=Home, S=Home, C=US"
 
           # Create key.properties file
           cat > android/key.properties << EOF
