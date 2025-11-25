@@ -467,38 +467,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
             const SizedBox(height: 16),
 
-            // High contrast toggle
-            Consumer<ThemeProvider>(
-              builder: (context, themeProvider, _) {
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white12,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: SwitchListTile(
-                    title: const Text(
-                      'High Contrast',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Use pure black and white for better accessibility',
-                      style: TextStyle(color: Colors.white54, fontSize: 12),
-                    ),
-                    value: themeProvider.highContrast,
-                    onChanged: (value) {
-                      themeProvider.setHighContrast(value);
-                    },
-                    activeColor: Colors.white,
-                    activeTrackColor: Colors.white54,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                );
-              },
-            ),
-
-            const SizedBox(height: 16),
-
             // Material You toggle
             Consumer<ThemeProvider>(
               builder: (context, themeProvider, _) {
@@ -520,6 +488,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: themeProvider.useMaterialTheme,
                     onChanged: (value) {
                       themeProvider.setUseMaterialTheme(value);
+                    },
+                    activeColor: Colors.white,
+                    activeTrackColor: Colors.white54,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Adaptive theme toggle
+            Consumer<ThemeProvider>(
+              builder: (context, themeProvider, _) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white12,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: SwitchListTile(
+                    title: const Text(
+                      'Adaptive Theme',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Extract colors from album and artist artwork',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    value: themeProvider.adaptiveTheme,
+                    onChanged: (value) {
+                      themeProvider.setAdaptiveTheme(value);
                     },
                     activeColor: Colors.white,
                     activeTrackColor: Colors.white54,

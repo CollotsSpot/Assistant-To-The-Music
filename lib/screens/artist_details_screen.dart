@@ -4,6 +4,8 @@ import '../models/media_item.dart';
 import '../providers/music_assistant_provider.dart';
 import 'album_details_screen.dart';
 import '../constants/hero_tags.dart';
+import '../theme/palette_helper.dart';
+import '../theme/theme_provider.dart';
 
 class ArtistDetailsScreen extends StatefulWidget {
   final Artist artist;
@@ -17,11 +19,36 @@ class ArtistDetailsScreen extends StatefulWidget {
 class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   List<Album> _albums = [];
   bool _isLoading = true;
+  ColorScheme? _lightColorScheme;
+  ColorScheme? _darkColorScheme;
 
   @override
   void initState() {
     super.initState();
     _loadArtistAlbums();
+    _extractColors();
+  }
+
+  Future<void> _extractColors() async {
+    final maProvider = context.read<MusicAssistantProvider>();
+    final imageUrl = maProvider.getImageUrl(widget.artist, size: 512);
+
+    if (imageUrl == null) return;
+
+    try {
+      final colorSchemes = await PaletteHelper.extractColorSchemes(
+        NetworkImage(imageUrl),
+      );
+
+      if (colorSchemes != null && mounted) {
+        setState(() {
+          _lightColorScheme = colorSchemes.$1;
+          _darkColorScheme = colorSchemes.$2;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to extract colors for artist: $e');
+    }
   }
 
   Future<void> _loadArtistAlbums() async {
@@ -64,20 +91,48 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final maProvider = context.watch<MusicAssistantProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final imageUrl = maProvider.getImageUrl(widget.artist, size: 512);
 
+    // Determine if we should use adaptive theme colors
+    final useAdaptiveTheme = themeProvider.adaptiveTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Get the color scheme to use
+    ColorScheme? adaptiveScheme;
+    if (useAdaptiveTheme) {
+      adaptiveScheme = isDark ? _darkColorScheme : _lightColorScheme;
+    }
+
+    // Determine colors to use
+    final backgroundColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.background
+        : const Color(0xFF1a1a1a);
+
+    final surfaceColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.surface
+        : const Color(0xFF2a2a2a);
+
+    final primaryColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.primary
+        : Colors.white;
+
+    final textColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.onSurface
+        : Colors.white;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1a1a1a),
+      backgroundColor: backgroundColor,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: const Color(0xFF1a1a1a),
+            backgroundColor: backgroundColor,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () => Navigator.pop(context),
-              color: Colors.white,
+              color: textColor,
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Column(
@@ -116,8 +171,8 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                       color: Colors.transparent,
                       child: Text(
                         widget.artist.name,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: textColor,
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                         ),
@@ -127,8 +182,8 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                   const SizedBox(height: 24),
                   Text(
                     'Albums',
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: textColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -139,18 +194,18 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
             ),
           ),
           if (_isLoading)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
+                child: CircularProgressIndicator(color: primaryColor),
               ),
             )
           else if (_albums.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
                 child: Text(
                   'No albums found',
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: textColor.withOpacity(0.54),
                     fontSize: 16,
                   ),
                 ),

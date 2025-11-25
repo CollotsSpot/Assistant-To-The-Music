@@ -14,6 +14,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   google_fonts: ^6.1.0
   dynamic_color: 1.6.8
+  palette_generator: ^0.3.3+3
 
   # State management
   provider: ^6.1.1

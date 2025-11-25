@@ -63,12 +63,4 @@ class AppTheme {
       fontFamily: 'Roboto',
     );
   }
-
-  // Apply high contrast modifications to a color scheme
-  static ColorScheme applyHighContrast(ColorScheme scheme, Brightness brightness) {
-    return scheme.copyWith(
-      surface: brightness == Brightness.light ? Colors.white : Colors.black,
-      background: brightness == Brightness.light ? Colors.white : Colors.black,
-    );
-  }
 }

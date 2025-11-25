@@ -82,9 +82,7 @@ class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindi
         builder: (context, themeProvider, _) {
           return FutureBuilder<(ColorScheme, ColorScheme)?>(
             future: themeProvider.useMaterialTheme
-                ? SystemThemeHelper.getSystemColorSchemes(
-                    highContrast: themeProvider.highContrast,
-                  )
+                ? SystemThemeHelper.getSystemColorSchemes()
                 : null,
             builder: (context, snapshot) {
               // Determine which color schemes to use
@@ -100,18 +98,6 @@ class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindi
                 // Use brand color schemes
                 lightColorScheme = brandLightColorScheme;
                 darkColorScheme = brandDarkColorScheme;
-
-                // Apply high contrast if enabled
-                if (themeProvider.highContrast) {
-                  lightColorScheme = AppTheme.applyHighContrast(
-                    lightColorScheme,
-                    Brightness.light,
-                  );
-                  darkColorScheme = AppTheme.applyHighContrast(
-                    darkColorScheme,
-                    Brightness.dark,
-                  );
-                }
               }
 
               // Update system UI overlay style based on theme mode

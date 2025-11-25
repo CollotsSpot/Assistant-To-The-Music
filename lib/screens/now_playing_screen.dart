@@ -7,6 +7,8 @@ import '../widgets/volume_control.dart';
 import 'queue_screen.dart';
 import '../constants/hero_tags.dart';
 import '../widgets/animated_icon_button.dart';
+import '../theme/palette_helper.dart';
+import '../theme/theme_provider.dart';
 
 class NowPlayingScreen extends StatefulWidget {
   const NowPlayingScreen({super.key});
@@ -20,12 +22,35 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
   bool _isLoadingQueue = true;
   Timer? _progressTimer;
   double? _seekPosition; // Track seek position while dragging
+  ColorScheme? _lightColorScheme;
+  ColorScheme? _darkColorScheme;
+  String? _lastImageUrl; // Track last image URL to avoid re-extracting
 
   @override
   void initState() {
     super.initState();
     _loadQueue();
     _startProgressTimer();
+  }
+
+  Future<void> _extractColors(String imageUrl) async {
+    if (_lastImageUrl == imageUrl) return; // Skip if same image
+    _lastImageUrl = imageUrl;
+
+    try {
+      final colorSchemes = await PaletteHelper.extractColorSchemes(
+        NetworkImage(imageUrl),
+      );
+
+      if (colorSchemes != null && mounted) {
+        setState(() {
+          _lightColorScheme = colorSchemes.$1;
+          _darkColorScheme = colorSchemes.$2;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to extract colors for now playing: $e');
+    }
   }
 
   @override
@@ -87,6 +112,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+
     return Consumer<MusicAssistantProvider>(
       builder: (context, maProvider, child) {
         final selectedPlayer = maProvider.selectedPlayer;
@@ -117,17 +144,49 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 
     final imageUrl = maProvider.getImageUrl(currentTrack, size: 512);
 
+    // Extract colors if adaptive theme is enabled and we have an image URL
+    if (themeProvider.adaptiveTheme && imageUrl != null) {
+      _extractColors(imageUrl);
+    }
+
+    // Determine if we should use adaptive theme colors
+    final useAdaptiveTheme = themeProvider.adaptiveTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Get the color scheme to use
+    ColorScheme? adaptiveScheme;
+    if (useAdaptiveTheme) {
+      adaptiveScheme = isDark ? _darkColorScheme : _lightColorScheme;
+    }
+
+    // Determine colors to use
+    final backgroundColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.background
+        : const Color(0xFF1a1a1a);
+
+    final surfaceColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.surface
+        : const Color(0xFF2a2a2a);
+
+    final primaryColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.primary
+        : Colors.white;
+
+    final textColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.onSurface
+        : Colors.white;
+
     return Hero(
       tag: HeroTags.nowPlayingBackground,
       child: Scaffold(
-        backgroundColor: const Color(0xFF1a1a1a),
+        backgroundColor: backgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           title: Text(
             selectedPlayer.name,
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: textColor.withOpacity(0.7),
               fontSize: 14,
               fontWeight: FontWeight.w300,
             ),
@@ -135,7 +194,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
           centerTitle: true,
           actions: [
             IconButton(
-              icon: const Icon(Icons.queue_music),
+              icon: Icon(Icons.queue_music, color: textColor),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -202,8 +261,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               // Track Info
               Text(
                 currentTrack.name,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textColor,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -214,8 +273,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
               const SizedBox(height: 8),
               Text(
                 currentTrack.artistsString,
-                style: const TextStyle(
-                  color: Colors.white70,
+                style: TextStyle(
+                  color: textColor.withOpacity(0.7),
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
@@ -226,8 +285,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                 const SizedBox(height: 4),
                 Text(
                   currentTrack.album!.name,
-                  style: const TextStyle(
-                    color: Colors.white54,
+                  style: TextStyle(
+                    color: textColor.withOpacity(0.54),
                     fontSize: 14,
                   ),
                   textAlign: TextAlign.center,
@@ -287,8 +346,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                         }
                       }
                     },
-                    activeColor: Colors.white,
-                    inactiveColor: Colors.white24,
+                    activeColor: primaryColor,
+                    inactiveColor: primaryColor.withOpacity(0.24),
                   ),
                 ),
                 Padding(
@@ -298,11 +357,11 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                     children: [
                       Text(
                         _formatDuration((_seekPosition ?? selectedPlayer.currentElapsedTime).toInt()),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: TextStyle(color: textColor.withOpacity(0.54), fontSize: 12),
                       ),
                       Text(
                         _formatDuration(currentTrack.duration!.inSeconds),
-                        style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        style: TextStyle(color: textColor.withOpacity(0.54), fontSize: 12),
                       ),
                     ],
                   ),
@@ -323,7 +382,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                   IconButton(
                     icon: Icon(
                       Icons.shuffle,
-                      color: _queue?.shuffle == true ? Colors.blue : Colors.white54,
+                      color: _queue?.shuffle == true ? primaryColor : textColor.withOpacity(0.54),
                     ),
                     iconSize: 24,
                     onPressed: _isLoadingQueue ? null : _toggleShuffle,
@@ -336,7 +395,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       color: Colors.transparent,
                       child: AnimatedIconButton(
                         icon: Icons.skip_previous_rounded,
-                        color: Colors.white,
+                        color: textColor,
                         iconSize: 42,
                         onPressed: () async {
                           try {
@@ -361,6 +420,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       color: Colors.transparent,
                       child: _AnimatedPlayButton(
                         isPlaying: selectedPlayer.isPlaying,
+                        primaryColor: primaryColor,
+                        backgroundColor: backgroundColor,
                         onPressed: () async {
                           try {
                             await maProvider.playPauseSelectedPlayer();
@@ -384,7 +445,7 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                       color: Colors.transparent,
                       child: AnimatedIconButton(
                         icon: Icons.skip_next_rounded,
-                        color: Colors.white,
+                        color: textColor,
                         iconSize: 42,
                         onPressed: () async {
                           try {
@@ -409,8 +470,8 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
                           ? Icons.repeat_one
                           : Icons.repeat,
                       color: _queue?.repeatMode != null && _queue!.repeatMode != 'off'
-                          ? Colors.blue
-                          : Colors.white54,
+                          ? primaryColor
+                          : textColor.withOpacity(0.54),
                     ),
                     iconSize: 24,
                     onPressed: _isLoadingQueue ? null : _cycleRepeat,
@@ -446,10 +507,14 @@ class _NowPlayingScreenState extends State<NowPlayingScreen> {
 /// Animated play/pause button with scale animation
 class _AnimatedPlayButton extends StatefulWidget {
   final bool isPlaying;
+  final Color primaryColor;
+  final Color backgroundColor;
   final VoidCallback onPressed;
 
   const _AnimatedPlayButton({
     required this.isPlaying,
+    required this.primaryColor,
+    required this.backgroundColor,
     required this.onPressed,
   });
 
@@ -500,15 +565,15 @@ class _AnimatedPlayButtonState extends State<_AnimatedPlayButton>
         child: Container(
           width: 72,
           height: 72,
-          decoration: const BoxDecoration(
-            color: Colors.white,
+          decoration: BoxDecoration(
+            color: widget.primaryColor,
             shape: BoxShape.circle,
           ),
           child: IconButton(
             icon: Icon(
               widget.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
             ),
-            color: const Color(0xFF1a1a1a),
+            color: widget.backgroundColor,
             iconSize: 42,
             onPressed: _handleTap,
           ),

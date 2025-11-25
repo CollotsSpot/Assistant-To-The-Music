@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../models/media_item.dart';
 import '../providers/music_assistant_provider.dart';
 import '../constants/hero_tags.dart';
+import '../theme/palette_helper.dart';
+import '../theme/theme_provider.dart';
 
 class AlbumDetailsScreen extends StatefulWidget {
   final Album album;
@@ -17,12 +19,37 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
   List<Track> _tracks = [];
   bool _isLoading = true;
   bool _isFavorite = false;
+  ColorScheme? _lightColorScheme;
+  ColorScheme? _darkColorScheme;
 
   @override
   void initState() {
     super.initState();
     _isFavorite = widget.album.favorite ?? false;
     _loadTracks();
+    _extractColors();
+  }
+
+  Future<void> _extractColors() async {
+    final maProvider = context.read<MusicAssistantProvider>();
+    final imageUrl = maProvider.getImageUrl(widget.album, size: 512);
+
+    if (imageUrl == null) return;
+
+    try {
+      final colorSchemes = await PaletteHelper.extractColorSchemes(
+        NetworkImage(imageUrl),
+      );
+
+      if (colorSchemes != null && mounted) {
+        setState(() {
+          _lightColorScheme = colorSchemes.$1;
+          _darkColorScheme = colorSchemes.$2;
+        });
+      }
+    } catch (e) {
+      print('⚠️ Failed to extract colors for album: $e');
+    }
   }
 
   Future<void> _toggleFavorite() async {
@@ -136,20 +163,48 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final maProvider = context.watch<MusicAssistantProvider>();
+    final themeProvider = context.watch<ThemeProvider>();
     final imageUrl = maProvider.getImageUrl(widget.album, size: 512);
 
+    // Determine if we should use adaptive theme colors
+    final useAdaptiveTheme = themeProvider.adaptiveTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Get the color scheme to use
+    ColorScheme? adaptiveScheme;
+    if (useAdaptiveTheme) {
+      adaptiveScheme = isDark ? _darkColorScheme : _lightColorScheme;
+    }
+
+    // Determine colors to use
+    final backgroundColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.background
+        : const Color(0xFF1a1a1a);
+
+    final surfaceColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.surface
+        : const Color(0xFF2a2a2a);
+
+    final primaryColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.primary
+        : Colors.white;
+
+    final textColor = useAdaptiveTheme && adaptiveScheme != null
+        ? adaptiveScheme.onSurface
+        : Colors.white;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF1a1a1a),
+      backgroundColor: backgroundColor,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             expandedHeight: 300,
             pinned: true,
-            backgroundColor: const Color(0xFF1a1a1a),
+            backgroundColor: backgroundColor,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () => Navigator.pop(context),
-              color: Colors.white,
+              color: textColor,
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Column(
@@ -203,8 +258,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                       color: Colors.transparent,
                       child: Text(
                         widget.album.name,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: textColor,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
@@ -218,8 +273,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                       color: Colors.transparent,
                       child: Text(
                         widget.album.artistsString,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: textColor.withOpacity(0.7),
                           fontSize: 16,
                         ),
                       ),
@@ -236,9 +291,9 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                             icon: const Icon(Icons.play_arrow_rounded),
                             label: const Text('Play Album'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: const Color(0xFF1a1a1a),
-                              disabledBackgroundColor: Colors.white38,
+                              backgroundColor: primaryColor,
+                              foregroundColor: backgroundColor,
+                              disabledBackgroundColor: primaryColor.withOpacity(0.38),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -265,10 +320,10 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  const Text(
+                  Text(
                     'Tracks',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -279,18 +334,18 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
             ),
           ),
           if (_isLoading)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
-                child: CircularProgressIndicator(color: Colors.white),
+                child: CircularProgressIndicator(color: primaryColor),
               ),
             )
           else if (_tracks.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
                 child: Text(
                   'No tracks found',
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: textColor.withOpacity(0.54),
                     fontSize: 16,
                   ),
                 ),
@@ -306,14 +361,14 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white12,
+                        color: surfaceColor,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
                         child: Text(
                           '${track.position ?? index + 1}',
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: TextStyle(
+                            color: textColor.withOpacity(0.7),
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -321,8 +376,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     ),
                     title: Text(
                       track.name,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textColor,
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 1,
@@ -330,8 +385,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     ),
                     subtitle: Text(
                       track.artistsString,
-                      style: const TextStyle(
-                        color: Colors.white54,
+                      style: TextStyle(
+                        color: textColor.withOpacity(0.54),
                         fontSize: 12,
                       ),
                       maxLines: 1,
@@ -340,8 +395,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> {
                     trailing: track.duration != null
                         ? Text(
                             _formatDuration(track.duration!),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            style: TextStyle(
+                              color: textColor.withOpacity(0.54),
                               fontSize: 12,
                             ),
                           )

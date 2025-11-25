@@ -3,8 +3,8 @@ import '../services/settings_service.dart';
 
 class ThemeProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
-  bool _highContrast = false;
   bool _useMaterialTheme = false;
+  bool _adaptiveTheme = true;
   Color _customColor = const Color(0xFF604CEC);
 
   ThemeProvider() {
@@ -12,16 +12,16 @@ class ThemeProvider extends ChangeNotifier {
   }
 
   ThemeMode get themeMode => _themeMode;
-  bool get highContrast => _highContrast;
   bool get useMaterialTheme => _useMaterialTheme;
+  bool get adaptiveTheme => _adaptiveTheme;
   Color get customColor => _customColor;
 
   Future<void> _loadSettings() async {
     final themeModeString = await SettingsService.getThemeMode();
     _themeMode = _parseThemeMode(themeModeString);
 
-    _highContrast = await SettingsService.getHighContrast();
     _useMaterialTheme = await SettingsService.getUseMaterialTheme();
+    _adaptiveTheme = await SettingsService.getAdaptiveTheme();
 
     final colorString = await SettingsService.getCustomColor();
     if (colorString != null) {
@@ -76,15 +76,15 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> setHighContrast(bool enabled) async {
-    _highContrast = enabled;
-    await SettingsService.saveHighContrast(enabled);
-    notifyListeners();
-  }
-
   Future<void> setUseMaterialTheme(bool enabled) async {
     _useMaterialTheme = enabled;
     await SettingsService.saveUseMaterialTheme(enabled);
+    notifyListeners();
+  }
+
+  Future<void> setAdaptiveTheme(bool enabled) async {
+    _adaptiveTheme = enabled;
+    await SettingsService.saveAdaptiveTheme(enabled);
     notifyListeners();
   }
 

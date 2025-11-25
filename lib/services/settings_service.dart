@@ -9,8 +9,8 @@ class SettingsService {
   static const String _keyPassword = 'password';
   static const String _keyBuiltinPlayerId = 'builtin_player_id';
   static const String _keyThemeMode = 'theme_mode';
-  static const String _keyHighContrast = 'high_contrast';
   static const String _keyUseMaterialTheme = 'use_material_theme';
+  static const String _keyAdaptiveTheme = 'adaptive_theme';
   static const String _keyCustomColor = 'custom_color';
 
   static Future<String?> getServerUrl() async {
@@ -126,16 +126,6 @@ class SettingsService {
     await prefs.setString(_keyThemeMode, mode);
   }
 
-  static Future<bool> getHighContrast() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_keyHighContrast) ?? false;
-  }
-
-  static Future<void> saveHighContrast(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_keyHighContrast, enabled);
-  }
-
   static Future<bool> getUseMaterialTheme() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_keyUseMaterialTheme) ?? false;
@@ -144,6 +134,16 @@ class SettingsService {
   static Future<void> saveUseMaterialTheme(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyUseMaterialTheme, enabled);
+  }
+
+  static Future<bool> getAdaptiveTheme() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyAdaptiveTheme) ?? true; // Default to true
+  }
+
+  static Future<void> saveAdaptiveTheme(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAdaptiveTheme, enabled);
   }
 
   static Future<String?> getCustomColor() async {
