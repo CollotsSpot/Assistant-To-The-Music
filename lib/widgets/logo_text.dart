@@ -18,17 +18,17 @@ class LogoText extends StatelessWidget {
     
     return Text(
       'Assistant To The Music',
-      style: GoogleFonts.permanentMarker(
+      style: GoogleFonts.specialElite(
         textStyle: TextStyle(
           color: textColor,
           fontSize: fontSize,
           fontWeight: FontWeight.bold,
-          letterSpacing: 1.2,
+          // Typewriter fonts often don't need extra letter spacing
           shadows: [
             Shadow(
               color: colorScheme.primary.withOpacity(0.5),
-              offset: const Offset(2, 2),
-              blurRadius: 4,
+              offset: const Offset(1, 1),
+              blurRadius: 2,
             ),
           ],
         ),

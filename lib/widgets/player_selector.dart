@@ -10,11 +10,12 @@ class PlayerSelector extends StatelessWidget {
     final maProvider = context.watch<MusicAssistantProvider>();
     final selectedPlayer = maProvider.selectedPlayer;
     final availablePlayers = maProvider.availablePlayers;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return IconButton(
       icon: Stack(
         children: [
-          const Icon(Icons.speaker_group_rounded),
+          Icon(Icons.speaker_group_rounded, color: colorScheme.onSurface),
           if (selectedPlayer != null)
             Positioned(
               right: 0,
@@ -23,9 +24,9 @@ class PlayerSelector extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: Colors.green,
+                  color: Colors.green, // Keep green for "active" status or use primary
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF1a1a1a), width: 1),
+                  border: Border.all(color: colorScheme.background, width: 1),
                 ),
               ),
             ),
@@ -45,12 +46,15 @@ class PlayerSelector extends StatelessWidget {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      isDismissible: true, // Allow tapping outside to close
       builder: (context) {
         // Use Consumer to listen for updates while sheet is open
         return Consumer<MusicAssistantProvider>(
           builder: (context, maProvider, child) {
             // Use the fresh list of players from the provider
             final currentPlayers = maProvider.availablePlayers;
+            final colorScheme = Theme.of(context).colorScheme;
+            final textTheme = Theme.of(context).textTheme;
 
             return DraggableScrollableSheet(
               initialChildSize: 0.7,
@@ -58,9 +62,9 @@ class PlayerSelector extends StatelessWidget {
               maxChildSize: 0.9,
               builder: (context, scrollController) {
                 return Container(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF2a2a2a),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   child: Column(
                     children: [
@@ -69,7 +73,7 @@ class PlayerSelector extends StatelessWidget {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: Colors.white24,
+                          color: colorScheme.onSurface.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -78,19 +82,18 @@ class PlayerSelector extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
                           children: [
-                            const Icon(Icons.speaker_group_rounded, color: Colors.white),
+                            Icon(Icons.speaker_group_rounded, color: colorScheme.onSurface),
                             const SizedBox(width: 12),
-                            const Text(
+                            Text(
                               'Select Player',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
+                              style: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const Spacer(),
                             IconButton(
-                              icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+                              icon: Icon(Icons.refresh_rounded, color: colorScheme.onSurfaceVariant),
                               onPressed: () async {
                                 await maProvider.refreshPlayers();
                               },

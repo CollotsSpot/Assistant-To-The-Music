@@ -407,12 +407,12 @@ class MusicAssistantAPI {
   Future<List<Album>> getRecentAlbums({int limit = 10}) async {
     try {
       _logger.log('Fetching recently played albums (limit=$limit)');
-      // Fetch all albums to sort client-side as server sorting might be unreliable
+      // Fetch a large number of albums to ensure we include recently played ones,
+      // then sort client-side since server-side sorting can be unreliable.
       final response = await _sendCommand(
         'music/albums/library_items',
         args: {
-          // Fetch more items to ensure we find the recently played ones
-          'limit': 100, 
+          'limit': 2000, // Increase limit to capture most of the library
         },
       );
 
