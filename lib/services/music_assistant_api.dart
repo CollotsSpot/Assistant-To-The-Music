@@ -442,61 +442,56 @@ class MusicAssistantAPI {
 
       _logger.log('📀 Got ${items.length} recently played tracks');
 
-      // Debug: Log first track to see structure
-      if (items.isNotEmpty) {
-        final firstTrack = items[0] as Map<String, dynamic>;
-        _logger.log('🔍 DEBUG: First track keys: ${firstTrack.keys.toList()}');
-        _logger.log('🔍 DEBUG: Track name: ${firstTrack['name']}');
+      // recently_played_items returns simplified track objects without album data
+      // We need to fetch full track details to get album info
+      _logger.log('🔍 Step 5: Fetching full track details to get album data...');
 
-        // Check different possible album field names
-        if (firstTrack.containsKey('album')) {
-          _logger.log('🔍 DEBUG: Has "album" field, type: ${firstTrack['album'].runtimeType}');
-          if (firstTrack['album'] is Map) {
-            _logger.log('🔍 DEBUG: Album keys: ${(firstTrack['album'] as Map).keys.toList()}');
-          }
-        }
-        if (firstTrack.containsKey('album_id')) {
-          _logger.log('🔍 DEBUG: Has "album_id": ${firstTrack['album_id']}');
-        }
-        if (firstTrack.containsKey('albums')) {
-          _logger.log('🔍 DEBUG: Has "albums" field');
-        }
-      }
-
-      // Try to extract albums from tracks
       final seenAlbumIds = <String>{};
       final albums = <Album>[];
+      var tracksProcessed = 0;
 
       for (final item in items) {
+        if (albums.length >= limit) break;
+
         try {
           final trackMap = item as Map<String, dynamic>;
+          final trackUri = trackMap['uri'] as String?;
 
-          // Try different ways to get album data
-          Map<String, dynamic>? albumData;
-
-          // Method 1: Direct 'album' object
-          if (trackMap['album'] is Map<String, dynamic>) {
-            albumData = trackMap['album'] as Map<String, dynamic>;
-          }
-          // Method 2: album_id reference - need to fetch album
-          else if (trackMap['album_id'] != null) {
-            _logger.log('⚠️ Track has album_id but no album object - need to implement album fetch');
+          if (trackUri == null) {
+            _logger.log('   ⚠️ Track missing URI, skipping');
             continue;
           }
 
+          tracksProcessed++;
+
+          // Fetch full track details which include album data
+          final trackResponse = await _sendCommand(
+            'music/item_by_uri',
+            args: {'uri': trackUri},
+          ).timeout(
+            const Duration(seconds: 5),
+            onTimeout: () => <String, dynamic>{'result': null},
+          );
+
+          final fullTrack = trackResponse['result'] as Map<String, dynamic>?;
+          if (fullTrack == null) continue;
+
+          // Extract album from full track data
+          final albumData = fullTrack['album'] as Map<String, dynamic>?;
           if (albumData != null) {
             final albumId = albumData['item_id']?.toString() ?? albumData['uri']?.toString();
             if (albumId != null && !seenAlbumIds.contains(albumId)) {
               seenAlbumIds.add(albumId);
               albums.add(Album.fromJson(albumData));
-
-              if (albums.length >= limit) break;
+              _logger.log('   ✓ Added album: ${albumData['name']}');
             }
           }
         } catch (e) {
-          _logger.log('   ⚠️ Error processing track: $e');
+          _logger.log('   ⚠️ Error fetching track details: $e');
         }
       }
+
+      _logger.log('🔍 Step 6: Processed $tracksProcessed tracks');
 
       _logger.log('✅ Extracted ${albums.length} unique albums from ${items.length} tracks');
 
