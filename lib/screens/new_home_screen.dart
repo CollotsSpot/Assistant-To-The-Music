@@ -8,11 +8,32 @@ import '../widgets/logo_text.dart';
 import 'settings_screen.dart';
 import 'search_screen.dart';
 
-class NewHomeScreen extends StatelessWidget {
+class NewHomeScreen extends StatefulWidget {
   const NewHomeScreen({super.key});
 
   @override
+  State<NewHomeScreen> createState() => _NewHomeScreenState();
+}
+
+class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveClientMixin {
+  Key _refreshKey = UniqueKey();
+
+  @override
+  bool get wantKeepAlive => true;
+
+  Future<void> _onRefresh() async {
+    // Simulate a short delay or verify connection
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() {
+        _refreshKey = UniqueKey();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -52,7 +73,12 @@ class NewHomeScreen extends StatelessWidget {
           builder: (context, maProvider, child) {
             return !maProvider.isConnected
                 ? _buildDisconnectedView(context, maProvider)
-                : _buildConnectedView(context, maProvider);
+                : RefreshIndicator(
+                    onRefresh: _onRefresh,
+                    color: colorScheme.primary,
+                    backgroundColor: colorScheme.surface,
+                    child: _buildConnectedView(context, maProvider),
+                  );
           },
         ),
       ),
@@ -124,9 +150,11 @@ class NewHomeScreen extends StatelessWidget {
 
   Widget _buildConnectedView(
       BuildContext context, MusicAssistantProvider provider) {
+    // Pass the unique key to force rebuild of children when refreshed
     return SingleChildScrollView(
-      physics: const BouncingScrollPhysics(),
+      physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       child: Column(
+        key: _refreshKey,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),

@@ -22,6 +22,7 @@ class _SearchScreenState extends State<SearchScreen> {
   };
   bool _isSearching = false;
   bool _hasSearched = false;
+  String _activeFilter = 'all'; // 'all', 'artists', 'albums', 'tracks'
 
   @override
   void initState() {
@@ -195,27 +196,75 @@ class _SearchScreenState extends State<SearchScreen> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        if (artists.isNotEmpty) ...[
-          _buildSectionHeader('Artists', artists.length),
-          const SizedBox(height: 8),
-          ...artists.map((item) => _buildArtistTile(item as Artist)),
-          const SizedBox(height: 24),
-        ],
-        if (albums.isNotEmpty) ...[
-          _buildSectionHeader('Albums', albums.length),
-          const SizedBox(height: 8),
-          ...albums.map((item) => _buildAlbumTile(item as Album)),
-          const SizedBox(height: 24),
-        ],
-        if (tracks.isNotEmpty) ...[
-          _buildSectionHeader('Tracks', tracks.length),
-          const SizedBox(height: 8),
-          ...tracks.map((item) => _buildTrackTile(item as Track)),
-        ],
+        // Filters
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          child: Row(
+            children: [
+              _buildFilterChip('All', 'all'),
+              const SizedBox(width: 8),
+              if (artists.isNotEmpty) ...[
+                _buildFilterChip('Artists', 'artists'),
+                const SizedBox(width: 8),
+              ],
+              if (albums.isNotEmpty) ...[
+                _buildFilterChip('Albums', 'albums'),
+                const SizedBox(width: 8),
+              ],
+              if (tracks.isNotEmpty) ...[
+                _buildFilterChip('Tracks', 'tracks'),
+              ],
+            ],
+          ),
+        ),
+        
+        // Results
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            children: [
+              if ((_activeFilter == 'all' || _activeFilter == 'artists') && artists.isNotEmpty) ...[
+                if (_activeFilter == 'all') _buildSectionHeader('Artists', artists.length),
+                ...artists.map((item) => _buildArtistTile(item as Artist)),
+                const SizedBox(height: 24),
+              ],
+              if ((_activeFilter == 'all' || _activeFilter == 'albums') && albums.isNotEmpty) ...[
+                if (_activeFilter == 'all') _buildSectionHeader('Albums', albums.length),
+                ...albums.map((item) => _buildAlbumTile(item as Album)),
+                const SizedBox(height: 24),
+              ],
+              if ((_activeFilter == 'all' || _activeFilter == 'tracks') && tracks.isNotEmpty) ...[
+                if (_activeFilter == 'all') _buildSectionHeader('Tracks', tracks.length),
+                ...tracks.map((item) => _buildTrackTile(item as Track)),
+              ],
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _activeFilter == value;
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _activeFilter = value;
+        });
+      },
+      selectedColor: colorScheme.primaryContainer,
+      checkmarkColor: colorScheme.onPrimaryContainer,
+      labelStyle: TextStyle(
+        color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
     );
   }
 

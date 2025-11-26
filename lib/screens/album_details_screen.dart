@@ -429,10 +429,10 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                           children: [
                             Text(
                               _albumDescription!,
-                              style: textTheme.bodyMedium?.copyWith(
+                              style: textTheme.bodyLarge?.copyWith(
                                 color: colorScheme.onBackground.withOpacity(0.8),
                               ),
-                              maxLines: _isDescriptionExpanded ? null : 3,
+                              maxLines: _isDescriptionExpanded ? null : 2,
                               overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),

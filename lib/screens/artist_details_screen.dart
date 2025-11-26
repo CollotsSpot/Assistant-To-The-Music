@@ -19,6 +19,7 @@ class ArtistDetailsScreen extends StatefulWidget {
 
 class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   List<Album> _albums = [];
+  List<Album> _providerAlbums = [];
   bool _isLoading = true;
   ColorScheme? _lightColorScheme;
   ColorScheme? _darkColorScheme;
@@ -75,56 +76,51 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   Future<void> _loadArtistAlbums() async {
     final provider = context.read<MusicAssistantProvider>();
 
-    // Load albums for this specific artist by filtering
     if (provider.api != null) {
-      print('🎵 Loading albums for artist: ${widget.artist.name}');
-      print('   Provider: ${widget.artist.provider}');
-      print('   ItemId: ${widget.artist.itemId}');
-
-      // Get all albums and filter locally (API filtering not reliable yet)
+      // 1. Get Library Albums
       final allAlbums = await provider.api!.getAlbums();
-
-      // Filter albums that include this artist
-      var artistAlbums = allAlbums.where((album) {
+      
+      var libraryAlbums = allAlbums.where((album) {
         if (album.artists == null) return false;
         return album.artists!.any((artist) =>
           artist.itemId == widget.artist.itemId || 
-          artist.name == widget.artist.name // Fallback to name match
+          artist.name == widget.artist.name
         );
       }).toList();
 
-      print('   Got ${artistAlbums.length} library albums for this artist');
+      List<Album> providerAlbums = [];
 
-      // Fallback: If no library albums, try searching the provider
-      if (artistAlbums.isEmpty && widget.artist.name.isNotEmpty) {
-        print('🔍 No library albums found. Searching provider for "${widget.artist.name}"...');
+      // 2. Get Provider Albums (via search)
+      if (widget.artist.name.isNotEmpty) {
         try {
           final searchResults = await provider.search(widget.artist.name);
-          final searchAlbums = searchResults['albums'] ?? [];
+          final searchAlbums = (searchResults['albums'] as List<dynamic>?)
+              ?.map((item) => item as Album)
+              .toList() ?? [];
           
-          // Filter search results to ensure they are actually for this artist
-          final validSearchAlbums = searchAlbums.where((item) {
-             // Ensure item is an Album and check artist match
-             if (item is! Album) return false;
-             return item.artists?.any((a) => 
+          // Filter: Must match artist name
+          providerAlbums = searchAlbums.where((album) {
+             return album.artists?.any((a) => 
                a.name.toLowerCase() == widget.artist.name.toLowerCase()
              ) ?? false;
-          }).cast<Album>().toList();
+          }).toList();
 
-          if (validSearchAlbums.isNotEmpty) {
-            print('✅ Found ${validSearchAlbums.length} albums via search fallback');
-            artistAlbums = validSearchAlbums;
-          } else {
-            print('⚠️ Search returned no valid albums for this artist');
-          }
+          // Filter: Must NOT be in libraryAlbums
+          final libraryAlbumNames = libraryAlbums.map((a) => a.name.toLowerCase()).toSet();
+          
+          providerAlbums = providerAlbums.where((a) => 
+            !libraryAlbumNames.contains(a.name.toLowerCase())
+          ).toList();
+
         } catch (e) {
-          print('❌ Error searching for artist albums: $e');
+          print('Error searching provider albums: $e');
         }
       }
 
       if (mounted) {
         setState(() {
-          _albums = artistAlbums;
+          _albums = libraryAlbums;
+          _providerAlbums = providerAlbums;
           _isLoading = false;
         });
       }
@@ -143,17 +139,12 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
     final themeProvider = context.watch<ThemeProvider>();
     final imageUrl = maProvider.getImageUrl(widget.artist, size: 512);
 
-    // Determine if we should use adaptive theme colors
     final useAdaptiveTheme = themeProvider.adaptiveTheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Get the color scheme to use
     ColorScheme? adaptiveScheme;
     if (useAdaptiveTheme) {
       adaptiveScheme = isDark ? _darkColorScheme : _lightColorScheme;
     }
-
-    // Use adaptive scheme if available, otherwise use global theme
     final colorScheme = adaptiveScheme ?? Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -211,11 +202,10 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                           color: colorScheme.onBackground,
                           fontWeight: FontWeight.bold,
                         ),
-                      ),
+                      ),,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // Artist Description/Biography
                   if (_artistDescription != null && _artistDescription!.isNotEmpty) ...[
                     InkWell(
                       onTap: () {
@@ -231,10 +221,10 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                           children: [
                             Text(
                               _artistDescription!,
-                              style: textTheme.bodyMedium?.copyWith(
+                              style: textTheme.bodyLarge?.copyWith(
                                 color: colorScheme.onBackground.withOpacity(0.8),
                               ),
-                              maxLines: _isDescriptionExpanded ? null : 3,
+                              maxLines: _isDescriptionExpanded ? null : 2,
                               overflow: _isDescriptionExpanded ? null : TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 4),
@@ -251,14 +241,6 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                     ),
                     const SizedBox(height: 8),
                   ],
-                  Text(
-                    'Albums',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.onBackground,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -269,7 +251,7 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                 child: CircularProgressIndicator(color: colorScheme.primary),
               ),
             )
-          else if (_albums.isEmpty)
+          else if (_albums.isEmpty && _providerAlbums.isEmpty)
             SliverFillRemaining(
               child: Center(
                 child: Text(
@@ -281,25 +263,76 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
                 ),
               ),
             )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.75,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final album = _albums[index];
-                    return _buildAlbumCard(album, maProvider);
-                  },
-                  childCount: _albums.length,
+          else ...[
+            // Library Albums Section
+            if (_albums.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+                  child: Text(
+                    'In Library',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onBackground,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final album = _albums[index];
+                      return _buildAlbumCard(album, maProvider);
+                    },
+                    childCount: _albums.length,
+                  ),
+                ),
+              ),
+            ],
+
+            // Provider Albums Section
+            if (_providerAlbums.isNotEmpty) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24.0, 32.0, 24.0, 12.0),
+                  child: Text(
+                    'From Providers',
+                    style: textTheme.titleLarge?.copyWith(
+                      color: colorScheme.onBackground,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.75,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final album = _providerAlbums[index];
+                      return _buildAlbumCard(album, maProvider);
+                    },
+                    childCount: _providerAlbums.length,
+                  ),
+                ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+            ],
+          ],
         ],
       ),
     );
