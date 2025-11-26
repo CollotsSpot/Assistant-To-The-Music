@@ -7,13 +7,15 @@ import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({super.key});
+  final bool shouldAutoFocus;
+
+  const SearchScreen({super.key, this.shouldAutoFocus = false});
 
   @override
   State<SearchScreen> createState() => SearchScreenState();
 }
 
-class SearchScreenState extends State<SearchScreen> {
+class SearchScreenState extends State<SearchScreen> with AutomaticKeepAliveClientMixin {
   late TextEditingController _searchController;
   late FocusNode _focusNode;
   Map<String, List<MediaItem>> _searchResults = {
@@ -26,20 +28,31 @@ class SearchScreenState extends State<SearchScreen> {
   String _activeFilter = 'all';
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
-    
+
     final provider = context.read<MusicAssistantProvider>();
     _searchController = TextEditingController(text: provider.lastSearchQuery);
     _searchResults = provider.lastSearchResults;
     _hasSearched = provider.lastSearchQuery.isNotEmpty;
-    
+
     _focusNode = FocusNode();
-    
-    // Standard autofocus since we are mounting/unmounting the widget
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+
+    // Only auto-focus if explicitly requested (when navigating from other screens)
+    if (widget.shouldAutoFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
+  }
+
+  void requestFocus() {
+    if (mounted) {
       _focusNode.requestFocus();
-    });
+    }
   }
 
   @override
@@ -79,6 +92,7 @@ class SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final maProvider = context.watch<MusicAssistantProvider>();
     final colorScheme = Theme.of(context).colorScheme;
 

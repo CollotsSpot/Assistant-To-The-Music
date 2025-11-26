@@ -9,11 +9,20 @@ import 'library_playlists_screen.dart';
 import 'settings_screen.dart';
 import 'search_screen.dart';
 
-class NewLibraryScreen extends StatelessWidget {
+class NewLibraryScreen extends StatefulWidget {
   const NewLibraryScreen({super.key});
 
   @override
+  State<NewLibraryScreen> createState() => _NewLibraryScreenState();
+}
+
+class _NewLibraryScreenState extends State<NewLibraryScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final provider = context.watch<MusicAssistantProvider>();
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;

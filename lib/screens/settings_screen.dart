@@ -15,7 +15,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends State<SettingsScreen> with AutomaticKeepAliveClientMixin {
   final _serverUrlController = TextEditingController();
   final _portController = TextEditingController(text: '8095');
   final _usernameController = TextEditingController();
@@ -25,6 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _authService = AuthService();
   final _logger = DebugLogger();
   bool _isConnecting = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -165,6 +168,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final provider = context.watch<MusicAssistantProvider>();
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
