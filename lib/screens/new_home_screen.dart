@@ -54,6 +54,17 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
         titleSpacing: 0,
         centerTitle: false,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SearchScreen(),
+                ),
+              );
+            },
+          ),
           const PlayerSelector(),
         ],
       ),
@@ -151,7 +162,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
           // Recently played albums (extracted from recently played tracks)
           AlbumRow(
             title: 'Recently Played',
-            heroTagSuffix: 'recent',
             loadAlbums: () async {
               if (provider.api == null) return [];
               return await provider.api!.getRecentAlbums(limit: 10);
@@ -162,7 +172,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
           // Discover Artists
           ArtistRow(
             title: 'Discover Artists',
-            heroTagSuffix: 'discover_artists',
             loadArtists: () async {
               if (provider.api == null) return [];
               return await provider.api!.getRandomArtists(limit: 10);
@@ -173,7 +182,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
           // Discover Albums
           AlbumRow(
             title: 'Discover Albums',
-            heroTagSuffix: 'discover_albums',
             loadAlbums: () async {
               if (provider.api == null) return [];
               return await provider.api!.getRandomAlbums(limit: 10);

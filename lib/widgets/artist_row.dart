@@ -20,17 +20,29 @@ class ArtistRow extends StatefulWidget {
   State<ArtistRow> createState() => _ArtistRowState();
 }
 
-class _ArtistRowState extends State<ArtistRow> {
+class _ArtistRowState extends State<ArtistRow> with AutomaticKeepAliveClientMixin {
   late Future<List<Artist>> _artistsFuture;
+  bool _hasLoaded = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _artistsFuture = widget.loadArtists();
+    _loadArtistsOnce();
+  }
+
+  void _loadArtistsOnce() {
+    if (!_hasLoaded) {
+      _artistsFuture = widget.loadArtists();
+      _hasLoaded = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 

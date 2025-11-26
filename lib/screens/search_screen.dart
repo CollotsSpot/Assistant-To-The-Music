@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // Added for SystemChannels
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
@@ -7,17 +6,15 @@ import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
 class SearchScreen extends StatefulWidget {
-  final bool shouldAutoFocus;
-
-  const SearchScreen({super.key, this.shouldAutoFocus = false});
+  const SearchScreen({super.key});
 
   @override
-  State<SearchScreen> createState() => SearchScreenState();
+  State<SearchScreen> createState() => _SearchScreenState();
 }
 
-class SearchScreenState extends State<SearchScreen> {
-  late TextEditingController _searchController;
-  late FocusNode _focusNode;
+class _SearchScreenState extends State<SearchScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   Map<String, List<MediaItem>> _searchResults = {
     'artists': [],
     'albums': [],
@@ -25,25 +22,13 @@ class SearchScreenState extends State<SearchScreen> {
   };
   bool _isSearching = false;
   bool _hasSearched = false;
-  String _activeFilter = 'all';
+  String _activeFilter = 'all'; // 'all', 'artists', 'albums', 'tracks'
 
   @override
   void initState() {
     super.initState();
-
-    final provider = context.read<MusicAssistantProvider>();
-    _searchController = TextEditingController(text: provider.lastSearchQuery);
-    _searchResults = provider.lastSearchResults;
-    _hasSearched = provider.lastSearchQuery.isNotEmpty;
-
-    _focusNode = FocusNode();
-
-    // Auto-focus if explicitly requested (when navigating to search screen)
-    if (widget.shouldAutoFocus) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
-      });
-    }
+    // Don't auto-focus - let user tap to focus
+    // This prevents keyboard popup bug when SearchScreen is in widget tree but not visible
   }
 
   @override
@@ -54,14 +39,11 @@ class SearchScreenState extends State<SearchScreen> {
   }
 
   Future<void> _performSearch(String query) async {
-    final provider = context.read<MusicAssistantProvider>();
-    
     if (query.isEmpty) {
       setState(() {
         _searchResults = {'artists': [], 'albums': [], 'tracks': []};
         _hasSearched = false;
       });
-      provider.saveSearchState('', _searchResults);
       return;
     }
 
@@ -69,22 +51,21 @@ class SearchScreenState extends State<SearchScreen> {
       _isSearching = true;
     });
 
+    final provider = context.read<MusicAssistantProvider>();
     final results = await provider.search(query);
 
-    if (mounted) {
-      setState(() {
-        _searchResults = results;
-        _isSearching = false;
-        _hasSearched = true;
-      });
-      provider.saveSearchState(query, results);
-    }
+    setState(() {
+      _searchResults = results;
+      _isSearching = false;
+      _hasSearched = true;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final maProvider = context.watch<MusicAssistantProvider>();
     final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -94,14 +75,6 @@ class SearchScreenState extends State<SearchScreen> {
         title: TextField(
           controller: _searchController,
           focusNode: _focusNode,
-          onTap: () {
-            // Ensure keyboard reappears if already focused but keyboard is hidden
-            if (!_focusNode.hasFocus) {
-              _focusNode.requestFocus();
-            } else {
-              SystemChannels.textInput.invokeMethod('TextInput.show');
-            }
-          },
           style: TextStyle(color: colorScheme.onSurface),
           cursorColor: colorScheme.primary,
           decoration: InputDecoration(
@@ -119,7 +92,7 @@ class SearchScreenState extends State<SearchScreen> {
                 : null,
           ),
           onChanged: (value) {
-            setState(() {}); // Rebuild for clear button
+            setState(() {});
             _performSearch(value);
           },
           onSubmitted: _performSearch,

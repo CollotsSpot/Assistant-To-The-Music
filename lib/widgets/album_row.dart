@@ -20,17 +20,29 @@ class AlbumRow extends StatefulWidget {
   State<AlbumRow> createState() => _AlbumRowState();
 }
 
-class _AlbumRowState extends State<AlbumRow> {
+class _AlbumRowState extends State<AlbumRow> with AutomaticKeepAliveClientMixin {
   late Future<List<Album>> _albumsFuture;
+  bool _hasLoaded = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
     super.initState();
-    _albumsFuture = widget.loadAlbums();
+    _loadAlbumsOnce();
+  }
+
+  void _loadAlbumsOnce() {
+    if (!_hasLoaded) {
+      _albumsFuture = widget.loadAlbums();
+      _hasLoaded = true;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
 

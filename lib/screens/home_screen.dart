@@ -24,31 +24,19 @@ class _HomeScreenState extends State<HomeScreen> {
       canPop: _selectedIndex == 0,
       onPopInvoked: (didPop) {
         if (didPop) return;
-
         setState(() {
           _selectedIndex = 0;
         });
       },
       child: Scaffold(
         backgroundColor: colorScheme.background,
-        body: Stack(
-          children: [
-            // Home and Library stay in tree with IndexedStack for state preservation
-            Offstage(
-              offstage: _selectedIndex > 1,
-              child: IndexedStack(
-                index: _selectedIndex.clamp(0, 1),
-                children: const [
-                  NewHomeScreen(),
-                  NewLibraryScreen(),
-                ],
-              ),
-            ),
-            // Search and Settings are conditionally rendered (not in tree when not visible)
-            if (_selectedIndex == 2)
-              const SearchScreen(shouldAutoFocus: true),
-            if (_selectedIndex == 3)
-              const SettingsScreen(),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: const [
+            NewHomeScreen(),
+            NewLibraryScreen(),
+            SearchScreen(),
+            SettingsScreen(),
           ],
         ),
         bottomNavigationBar: Column(
@@ -72,8 +60,6 @@ class _HomeScreenState extends State<HomeScreen> {
               child: BottomNavigationBar(
                 currentIndex: _selectedIndex,
                 onTap: (index) {
-                  if (_selectedIndex == index) return;
-
                   setState(() {
                     _selectedIndex = index;
                   });
