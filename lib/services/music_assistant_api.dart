@@ -410,31 +410,54 @@ class MusicAssistantAPI {
   Future<List<Album>> getRecentAlbums({int limit = 10}) async {
     try {
       _logger.log('Fetching recently played albums (limit=$limit)');
-      // Use the recently_played_items command with album media type filter
+      // Get recently played tracks, then extract unique albums from them
+      // This is more reliable than using album filter which returns incomplete data
       final response = await _sendCommand(
         'music/recently_played_items',
         args: {
-          'limit': limit,
-          'media_types': ['album'],
+          'limit': limit * 5, // Get more tracks to ensure we have enough unique albums
+          'media_types': ['track'],
         },
       );
 
       final items = response['result'] as List<dynamic>?;
-      if (items == null) {
-        _logger.log('⚠️ No items returned for recent albums');
+      if (items == null || items.isEmpty) {
+        _logger.log('⚠️ No recently played tracks returned');
         return [];
       }
 
-      _logger.log('✅ Got ${items.length} recently played albums');
+      _logger.log('📀 Got ${items.length} recently played tracks');
 
-      if (items.isNotEmpty) {
-        _logger.log('   First recent album: ${items[0]['name']}');
-        _logger.log('   🔍 DEBUG: First album raw data: ${items[0]}');
+      // Extract unique albums from tracks
+      final seenAlbumIds = <String>{};
+      final albums = <Album>[];
+
+      for (final item in items) {
+        final itemMap = item as Map<String, dynamic>;
+        final albumData = itemMap['album'] as Map<String, dynamic>?;
+
+        if (albumData != null) {
+          final albumId = albumData['item_id']?.toString();
+          if (albumId != null && !seenAlbumIds.contains(albumId)) {
+            seenAlbumIds.add(albumId);
+            try {
+              albums.add(Album.fromJson(albumData));
+            } catch (e) {
+              _logger.log('   ⚠️ Failed to parse album: $e');
+            }
+          }
+        }
+
+        if (albums.length >= limit) break;
       }
 
-      return items
-          .map((item) => Album.fromJson(item as Map<String, dynamic>))
-          .toList();
+      _logger.log('✅ Extracted ${albums.length} unique albums from recent tracks');
+
+      if (albums.isNotEmpty) {
+        _logger.log('   First recent album: ${albums[0].name} by ${albums[0].artistsString}');
+      }
+
+      return albums;
     } catch (e) {
       _logger.log('❌ Error getting recent albums: $e');
       return [];
