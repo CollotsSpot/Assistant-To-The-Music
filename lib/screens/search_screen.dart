@@ -36,13 +36,9 @@ class SearchScreenState extends State<SearchScreen> {
     _focusNode = FocusNode();
     
     // Standard autofocus since we are mounting/unmounting the widget
-    // If query is empty, focus. If has results, maybe don't focus?
-    // Let's focus if it's empty.
-    if (provider.lastSearchQuery.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
   }
 
   @override
@@ -90,9 +86,21 @@ class SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         backgroundColor: colorScheme.surface,
         elevation: 0,
+import 'package:flutter/services.dart'; // Added for SystemChannels
+
+// ...
+
         title: TextField(
           controller: _searchController,
           focusNode: _focusNode,
+          onTap: () {
+            // Ensure keyboard reappears if already focused but keyboard is hidden
+            if (!_focusNode.hasFocus) {
+              _focusNode.requestFocus();
+            } else {
+              SystemChannels.textInput.invokeMethod('TextInput.show');
+            }
+          },
           style: TextStyle(color: colorScheme.onSurface),
           cursorColor: colorScheme.primary,
           decoration: InputDecoration(
