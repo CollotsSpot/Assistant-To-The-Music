@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Added for SystemChannels
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
@@ -86,10 +87,6 @@ class SearchScreenState extends State<SearchScreen> {
       appBar: AppBar(
         backgroundColor: colorScheme.surface,
         elevation: 0,
-import 'package:flutter/services.dart'; // Added for SystemChannels
-
-// ...
-
         title: TextField(
           controller: _searchController,
           focusNode: _focusNode,
