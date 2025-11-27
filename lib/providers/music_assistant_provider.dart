@@ -157,11 +157,11 @@ class MusicAssistantProvider with ChangeNotifier {
 
     // Use lowercase state values as expected by the server
     final isPlaying = _localPlayer.isPlaying;
-    // final state = isPlaying ? 'playing' : 'idle';
+    final state = isPlaying ? 'playing' : 'stopped';
 
     await _api!.updateBuiltinPlayerState(
       playerId,
-      // state: state,
+      state: state,
       elapsedTime: position,
       totalTime: duration > 0 ? duration : null,
       powered: _isLocalPlayerPowered,
