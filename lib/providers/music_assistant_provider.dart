@@ -531,23 +531,52 @@ class MusicAssistantProvider with ChangeNotifier {
     try {
       _logger.log('🔋 togglePower called for playerId: $playerId');
 
-      // Find the player to get current power state
-      final player = _availablePlayers.firstWhere(
-        (p) => p.playerId == playerId,
-        orElse: () => _selectedPlayer != null && _selectedPlayer!.playerId == playerId
-            ? _selectedPlayer!
-            : throw Exception("Player not found"),
-      );
+      // Check if this is the local builtin player
+      final localPlayerId = await SettingsService.getBuiltinPlayerId();
+      final isLocalPlayer = localPlayerId != null && playerId == localPlayerId;
 
-      _logger.log('🔋 Current power state: ${player.powered}, will set to: ${!player.powered}');
+      _logger.log('🔋 Is local builtin player: $isLocalPlayer (local ID: $localPlayerId)');
 
-      // Toggle the state
-      await _api?.setPower(playerId, !player.powered);
+      if (isLocalPlayer && _isLocalPlaybackEnabled) {
+        // For builtin player, manage power state locally
+        _logger.log('🔋 Handling power toggle LOCALLY for builtin player');
 
-      _logger.log('🔋 setPower command sent successfully');
+        // Toggle the local power state
+        _isLocalPlayerPowered = !_isLocalPlayerPowered;
+        _logger.log('🔋 Local player power set to: $_isLocalPlayerPowered');
 
-      // Immediately refresh players to update UI
-      await refreshPlayers();
+        // If powering off, stop playback
+        if (!_isLocalPlayerPowered) {
+          _logger.log('🔋 Stopping playback because powered off');
+          await _localPlayer.stop();
+        }
+
+        // Report the new state to the server immediately
+        await _reportLocalPlayerState();
+
+        // Refresh player list to update UI
+        await refreshPlayers();
+      } else {
+        // For regular MA players, send power command to server
+        _logger.log('🔋 Sending power command to server for regular player');
+
+        final player = _availablePlayers.firstWhere(
+          (p) => p.playerId == playerId,
+          orElse: () => _selectedPlayer != null && _selectedPlayer!.playerId == playerId
+              ? _selectedPlayer!
+              : throw Exception("Player not found"),
+        );
+
+        _logger.log('🔋 Current power state: ${player.powered}, will set to: ${!player.powered}');
+
+        // Toggle the state
+        await _api?.setPower(playerId, !player.powered);
+
+        _logger.log('🔋 setPower command sent successfully');
+
+        // Immediately refresh players to update UI
+        await refreshPlayers();
+      }
     } catch (e) {
       _logger.log('🔋 ERROR in togglePower: $e');
       ErrorHandler.logError('Toggle power', e);
