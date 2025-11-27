@@ -1130,16 +1130,17 @@ class MusicAssistantAPI {
   /// Register this device as a player
   Future<void> registerBuiltinPlayer(String playerId, String name) async {
     try {
+      _logger.log('🎵 Registering builtin player: id=$playerId, name=$name');
       await _sendCommand(
-        'builtin_player/register', // Corrected command based on ARCHITECTURE.md
+        'builtin_player/register',
         args: {
           'player_id': playerId,
-          'name': name,
-          // Capabilities can be added here if needed, e.g., 'can_play_stream': true
+          'player_name': name,  // Server expects 'player_name', not 'name'
         },
       );
+      _logger.log('✅ Builtin player registered successfully');
     } catch (e) {
-      _logger.log('Error registering built-in player: $e');
+      _logger.log('❌ Error registering built-in player: $e');
       rethrow; // Rethrow to propagate the error up
     }
   }
