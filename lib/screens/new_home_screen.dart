@@ -4,7 +4,6 @@ import '../providers/music_assistant_provider.dart';
 import '../widgets/player_selector.dart';
 import '../widgets/album_row.dart';
 import '../widgets/artist_row.dart';
-import '../widgets/logo_text.dart';
 import 'settings_screen.dart';
 import 'search_screen.dart';
 

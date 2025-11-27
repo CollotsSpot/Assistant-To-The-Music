@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../services/settings_service.dart';
 import '../services/auth_service.dart';
-import '../widgets/logo_text.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
