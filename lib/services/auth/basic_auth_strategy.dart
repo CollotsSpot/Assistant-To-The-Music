@@ -18,10 +18,11 @@ class BasicAuthStrategy implements AuthStrategy {
     // Encode credentials to base64
     final credentials = base64Encode(utf8.encode('$username:$password'));
 
-    // Test credentials against server
+    // Test credentials against server root endpoint
+    // (Music Assistant doesn't have /api/info)
     try {
       final response = await http.get(
-        Uri.parse('$serverUrl/api/info'),
+        Uri.parse(serverUrl),
         headers: {'Authorization': 'Basic $credentials'},
       ).timeout(const Duration(seconds: 5));
 
@@ -47,7 +48,7 @@ class BasicAuthStrategy implements AuthStrategy {
 
     try {
       final response = await http.get(
-        Uri.parse('$serverUrl/api/info'),
+        Uri.parse(serverUrl),
         headers: {'Authorization': 'Basic $base64Creds'},
       ).timeout(const Duration(seconds: 5));
 
