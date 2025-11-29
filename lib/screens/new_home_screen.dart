@@ -41,10 +41,10 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Padding(
-          padding: const EdgeInsets.only(left: 8.0, top: 8.0, bottom: 8.0),
+          padding: const EdgeInsets.only(left: 8.0),
           child: Image.asset(
             'assets/images/massiv_logo.png',
-            height: 100,
+            height: 40,
             fit: BoxFit.contain,
             alignment: Alignment.centerLeft,
           ),

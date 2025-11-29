@@ -16,6 +16,19 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final GlobalKey<SearchScreenState> _searchScreenKey = GlobalKey<SearchScreenState>();
   final GlobalKey<ExpandablePlayerState> _playerKey = GlobalKey<ExpandablePlayerState>();
+  DateTime? _lastBackPress;
+
+  void _showExitSnackBar() {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Press back again to exit'),
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: 80, left: 16, right: 16),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,17 +36,35 @@ class _HomeScreenState extends State<HomeScreen> {
     final colorScheme = theme.colorScheme;
 
     return PopScope(
-      canPop: _selectedIndex == 0,
-      onPopInvoked: (didPop) {
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+
         // If player is expanded, collapse it first
         if (_playerKey.currentState?.isExpanded == true) {
           _playerKey.currentState?.collapse();
           return;
         }
-        setState(() {
-          _selectedIndex = 0;
-        });
+
+        // If not on home tab, navigate to home
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+          return;
+        }
+
+        // On home tab - check for double press to exit
+        final now = DateTime.now();
+        if (_lastBackPress != null &&
+            now.difference(_lastBackPress!) < const Duration(seconds: 2)) {
+          // Double press detected, allow exit
+          Navigator.of(context).pop();
+        } else {
+          // First press, show message
+          _lastBackPress = now;
+          _showExitSnackBar();
+        }
       },
       child: Stack(
         children: [
