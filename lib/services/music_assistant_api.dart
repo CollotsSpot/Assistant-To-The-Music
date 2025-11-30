@@ -1233,12 +1233,26 @@ class MusicAssistantAPI {
 
       // Get current builtin player ID to avoid deleting ourselves
       final currentPlayerId = await SettingsService.getBuiltinPlayerId();
+      final localPlayerName = await SettingsService.getLocalPlayerName();
+
+      _logger.log('🧹 Current player ID: $currentPlayerId');
+      _logger.log('🧹 Local player name: $localPlayerName');
+      _logger.log('🧹 Total players from server: ${allPlayers.length}');
 
       // Find unavailable builtin players
+      // Detection: provider == 'builtin_player' OR name matches our local player name pattern
       final ghostPlayers = allPlayers.where((player) {
-        final isBuiltinPlayer = player.provider == 'builtin_player';
+        // Check if this is a builtin player by provider field or name
+        final isBuiltinByProvider = player.provider == 'builtin_player';
+        final isBuiltinByName = player.name.toLowerCase() == localPlayerName.toLowerCase() ||
+            player.name.toLowerCase().contains('massiv') ||
+            player.name.toLowerCase() == 'this device';
+        final isBuiltinPlayer = isBuiltinByProvider || isBuiltinByName;
+
         final isUnavailable = !player.available;
         final isNotCurrentPlayer = player.playerId != currentPlayerId;
+
+        _logger.log('🧹 Player: ${player.name} (${player.playerId}) - provider: ${player.provider}, available: ${player.available}, isBuiltin: $isBuiltinPlayer, isNotCurrent: $isNotCurrentPlayer');
 
         return isBuiltinPlayer && isUnavailable && isNotCurrentPlayer;
       }).toList();
@@ -1259,6 +1273,7 @@ class MusicAssistantAPI {
         try {
           await unregisterBuiltinPlayer(player.playerId);
           removedCount++;
+          _logger.log('✅ Removed: ${player.name}');
         } catch (e) {
           _logger.log('⚠️ Failed to remove ghost player ${player.playerId}: $e');
         }

@@ -199,22 +199,22 @@ class MusicAssistantProvider with ChangeNotifier {
       _api = MusicAssistantAPI(serverUrl, _authManager);
 
       // Listen to connection state changes
-      _api!.connectionState.listen((state) {
+      _api!.connectionState.listen((state) async {
         _connectionState = state;
         notifyListeners();
 
         if (state == MAConnectionState.connected) {
-          // Clean up ghost players from previous installations
-          _cleanupGhostPlayers();
+          // Register local player FIRST
+          await _registerLocalPlayer();
 
-          // Load available players and auto-select
-          _loadAndSelectPlayers();
+          // Clean up ghost players AFTER registering (so we don't delete ourselves)
+          await _cleanupGhostPlayers();
+
+          // Load available players and auto-select local player
+          await _loadAndSelectPlayers();
 
           // Auto-load library when connected
           loadLibrary();
-
-          // Always register local player
-          _registerLocalPlayer();
         } else if (state == MAConnectionState.disconnected) {
           _availablePlayers = [];
           _selectedPlayer = null;
@@ -774,13 +774,31 @@ class MusicAssistantProvider with ChangeNotifier {
 
         // Only auto-select if NO player is currently selected
         if (playerToSelect == null) {
-          // Try to find a playing player first
-          try {
-            playerToSelect = _availablePlayers.firstWhere(
-              (p) => p.state == 'playing' && p.available,
-            );
-          } catch (e) {
-            // No playing player found, pick first available
+          // Priority 1: Local player (this device) - always prefer this
+          if (builtinPlayerId != null) {
+            try {
+              playerToSelect = _availablePlayers.firstWhere(
+                (p) => p.playerId == builtinPlayerId && p.available,
+              );
+              _logger.log('📱 Auto-selected local player: ${playerToSelect?.name}');
+            } catch (e) {
+              // Local player not found or not available
+            }
+          }
+
+          // Priority 2: A currently playing player
+          if (playerToSelect == null) {
+            try {
+              playerToSelect = _availablePlayers.firstWhere(
+                (p) => p.state == 'playing' && p.available,
+              );
+            } catch (e) {
+              // No playing player found
+            }
+          }
+
+          // Priority 3: First available player
+          if (playerToSelect == null) {
             playerToSelect = _availablePlayers.firstWhere(
               (p) => p.available,
               orElse: () => _availablePlayers.first,
