@@ -160,6 +160,7 @@ class LocalPlayerService {
   Future<void> playUrl(String url) async {
     try {
       _logger.log('LocalPlayerService: Loading URL: $url');
+      _logger.log('LocalPlayerService: _useAudioHandler=$_useAudioHandler, _fallbackPlayer=${_fallbackPlayer != null}');
 
       // Get auth headers from AuthManager
       final headers = authManager.getStreamingHeaders();
@@ -171,6 +172,7 @@ class LocalPlayerService {
       }
 
       if (_useAudioHandler) {
+        _logger.log('LocalPlayerService: Using AudioHandler to play');
         // Play via audio handler with metadata for notification
         await audioHandler!.playUrl(
           url,
@@ -181,7 +183,9 @@ class LocalPlayerService {
           duration: _currentMetadata?.duration,
           headers: headers.isNotEmpty ? headers : null,
         );
+        _logger.log('LocalPlayerService: AudioHandler.playUrl completed');
       } else if (_fallbackPlayer != null) {
+        _logger.log('LocalPlayerService: Using fallback player');
         // Fallback: play directly
         final source = AudioSource.uri(
           Uri.parse(url),
@@ -189,9 +193,13 @@ class LocalPlayerService {
         );
         await _fallbackPlayer!.setAudioSource(source);
         await _fallbackPlayer!.play();
+        _logger.log('LocalPlayerService: Fallback player started');
+      } else {
+        _logger.log('LocalPlayerService: ERROR - No player available!');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       _logger.log('LocalPlayerService: Error playing URL: $e');
+      _logger.log('LocalPlayerService: Stack trace: $stackTrace');
       rethrow;
     }
   }

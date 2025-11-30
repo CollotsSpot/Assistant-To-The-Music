@@ -20,9 +20,12 @@ Future<void> main() async {
   // Initialize audio service for background playback and notifications
   // Wrapped in try-catch to prevent app crash if audio service fails
   try {
+    print('Initializing audio handler...');
     audioHandler = await initAudioHandler();
-  } catch (e) {
+    print('Audio handler initialized successfully: ${audioHandler != null}');
+  } catch (e, stackTrace) {
     print('Failed to initialize audio handler: $e');
+    print('Stack trace: $stackTrace');
     // App will continue without background playback
   }
 

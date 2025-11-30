@@ -199,10 +199,14 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
         tag: item,
       );
 
+      _logger.log('MassivAudioHandler: Setting audio source...');
       await _player.setAudioSource(source);
+      _logger.log('MassivAudioHandler: Audio source set, starting playback...');
       await _player.play();
-    } catch (e) {
+      _logger.log('MassivAudioHandler: Playback started successfully');
+    } catch (e, stackTrace) {
       _logger.log('MassivAudioHandler: Error playing URL: $e');
+      _logger.log('MassivAudioHandler: Stack trace: $stackTrace');
       rethrow;
     }
   }
