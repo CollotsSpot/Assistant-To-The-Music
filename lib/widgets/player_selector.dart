@@ -78,17 +78,22 @@ class PlayerSelector extends StatelessWidget {
       GlobalPlayerOverlay.collapsePlayer();
     }
 
+    // Hide the mini player while device selector is open
+    GlobalPlayerOverlay.hidePlayer();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       isDismissible: true,
-      // Use elevated route so it appears above mini player
       useRootNavigator: true,
       builder: (context) {
         return _PlayerSelectorSheet();
       },
-    );
+    ).whenComplete(() {
+      // Show the mini player again when sheet closes
+      GlobalPlayerOverlay.showPlayer();
+    });
   }
 }
 
