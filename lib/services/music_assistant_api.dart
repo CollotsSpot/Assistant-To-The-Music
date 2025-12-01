@@ -1437,53 +1437,51 @@ class MusicAssistantAPI {
   }
 
   /// Remove a player from Music Assistant (permanently deletes from storage)
-  /// Tries multiple methods to ensure removal
+  /// Uses config/players/remove which actually removes the persistent config
   Future<void> removePlayer(String playerId) async {
     _logger.log('🗑️ Attempting to remove player: $playerId');
 
-    // Method 1: players/remove (standard removal)
-    try {
-      _logger.log('   Method 1: players/remove');
-      await _sendCommand(
-        'players/remove',
-        args: {'player_id': playerId},
-      );
-      _logger.log('✅ Player removed via players/remove');
-      return;
-    } catch (e) {
-      _logger.log('⚠️ players/remove failed: $e');
-    }
-
-    // Method 2: builtin_player/unregister (for builtin players)
+    // Step 1: Unregister builtin player first (if applicable)
     if (playerId.startsWith('ensemble_') || playerId.startsWith('ma_')) {
       try {
-        _logger.log('   Method 2: builtin_player/unregister');
+        _logger.log('   Step 1: builtin_player/unregister');
         await _sendCommand(
           'builtin_player/unregister',
           args: {'player_id': playerId},
         );
-        _logger.log('✅ Player unregistered via builtin_player/unregister');
-        return;
+        _logger.log('✅ Player unregistered');
       } catch (e) {
-        _logger.log('⚠️ builtin_player/unregister failed: $e');
+        _logger.log('⚠️ builtin_player/unregister failed (may already be unregistered): $e');
       }
     }
 
-    // Method 3: Try remove_group_player in case it's somehow a group
+    // Step 2: Remove from player manager
     try {
-      _logger.log('   Method 3: players/remove_group_player');
+      _logger.log('   Step 2: players/remove');
       await _sendCommand(
-        'players/remove_group_player',
+        'players/remove',
         args: {'player_id': playerId},
       );
-      _logger.log('✅ Player removed via remove_group_player');
-      return;
+      _logger.log('✅ Player removed from manager');
     } catch (e) {
-      _logger.log('⚠️ remove_group_player failed: $e');
+      _logger.log('⚠️ players/remove failed: $e');
     }
 
-    _logger.log('❌ All removal methods failed for: $playerId');
-    throw Exception('Failed to remove player $playerId - all methods failed');
+    // Step 3: Remove the persistent config (this is the key step!)
+    try {
+      _logger.log('   Step 3: config/players/remove (permanent deletion)');
+      await _sendCommand(
+        'config/players/remove',
+        args: {'player_id': playerId},
+      );
+      _logger.log('✅ Player config permanently removed');
+      return;
+    } catch (e) {
+      _logger.log('⚠️ config/players/remove failed: $e');
+    }
+
+    _logger.log('❌ Could not permanently remove player: $playerId');
+    throw Exception('Failed to permanently remove player $playerId');
   }
 
   // ============================================================================
