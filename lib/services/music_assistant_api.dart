@@ -1525,9 +1525,12 @@ class MusicAssistantAPI {
       int failedCount = 0;
 
       for (final player in ghostPlayers) {
-        if (await removePlayerConfig(player.playerId)) {
+        try {
+          await removePlayer(player.playerId);
+          _logger.log('✅ Removed ghost: ${player.name}');
           removedCount++;
-        } else {
+        } catch (e) {
+          _logger.log('❌ Failed to remove ${player.name}: $e');
           failedCount++;
         }
       }
