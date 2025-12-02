@@ -57,13 +57,13 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
     _expandAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutExpo,
-      reverseCurve: Curves.easeInExpo,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
     );
 
     _controller.addStatusListener((status) {
@@ -659,15 +659,21 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                     right: 4,
                     child: Opacity(
                       opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
-                      child: IconButton(
-                        icon: Icon(Icons.queue_music_rounded, color: textColor, size: 24),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => const QueueScreen()),
-                          );
-                        },
-                        padding: const EdgeInsets.all(12),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const QueueScreen()),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(24),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Icon(Icons.queue_music_rounded, color: textColor, size: 24),
+                          ),
+                        ),
                       ),
                     ),
                   ),
