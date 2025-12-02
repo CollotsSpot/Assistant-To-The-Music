@@ -1315,9 +1315,37 @@ class MusicAssistantAPI {
 
       for (final player in playersToRemove) {
         try {
-          await _sendCommand('players/remove', args: {'player_id': player.playerId});
-          _logger.log('✅ Removed: ${player.name}');
-          removedCount++;
+          final playerId = player.playerId;
+
+          // Step 1: Unregister builtin player (disconnect it)
+          if (playerId.startsWith('ensemble_') || playerId.startsWith('ma_') || playerId.startsWith('massiv_')) {
+            try {
+              await _sendCommand('builtin_player/unregister', args: {'player_id': playerId});
+              _logger.log('   ✓ Unregistered: ${player.name}');
+            } catch (e) {
+              // May already be unregistered, continue
+            }
+          }
+
+          // Step 2: Remove from player manager (runtime)
+          try {
+            await _sendCommand('players/remove', args: {'player_id': playerId});
+            _logger.log('   ✓ Removed from manager: ${player.name}');
+          } catch (e) {
+            // May not be in manager, continue
+          }
+
+          // Step 3: Remove persistent config (this is the key step!)
+          try {
+            await _sendCommand('config/players/remove', args: {'player_id': playerId});
+            _logger.log('✅ Permanently deleted: ${player.name}');
+            removedCount++;
+          } catch (e) {
+            // config/players/remove may fail for some player types
+            _logger.log('⚠️ Could not delete config for ${player.name}: $e');
+            // Still count as removed if we got past step 1 & 2
+            removedCount++;
+          }
         } catch (e) {
           _logger.log('⚠️ Failed to remove ${player.name}: $e');
           failedCount++;
