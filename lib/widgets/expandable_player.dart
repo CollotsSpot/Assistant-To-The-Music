@@ -648,7 +648,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                     ),
                   ),
 
-                // Collapse button (expanded only)
+                // TEST: Down arrow now opens queue
                 if (t > 0.3)
                   Positioned(
                     top: topPadding + 4,
@@ -657,22 +657,22 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                       opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
                       child: IconButton(
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: textColor, size: 28),
-                        onPressed: collapse,
+                        onPressed: () => _openQueue(),
                         padding: const EdgeInsets.all(12),
                       ),
                     ),
                   ),
 
-                // Queue button (expanded only) - positioned LEFT of collapse button for testing
+                // TEST: Queue icon now collapses
                 if (t > 0.3)
                   Positioned(
                     top: topPadding + 4,
-                    left: 52,  // Next to collapse button
+                    left: 52,
                     child: Opacity(
                       opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
                       child: IconButton(
                         icon: Icon(Icons.queue_music_rounded, color: textColor, size: 24),
-                        onPressed: () => _openQueue(),
+                        onPressed: collapse,
                         padding: const EdgeInsets.all(12),
                       ),
                     ),
