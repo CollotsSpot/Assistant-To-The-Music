@@ -748,11 +748,13 @@ class MusicAssistantAPI {
                   .toList() ??
               [];
 
-
+          // Deduplicate results by name
+          // MA returns both library items and provider items for the same content
+          // Prefer library items (provider='library') as they have all provider mappings
           return <String, List<MediaItem>>{
-            'artists': artists,
-            'albums': albums,
-            'tracks': tracks,
+            'artists': _deduplicateResults(artists),
+            'albums': _deduplicateResults(albums),
+            'tracks': _deduplicateResults(tracks),
           };
         } catch (e) {
           _logger.log('Error searching: $e');
@@ -763,6 +765,29 @@ class MusicAssistantAPI {
       _logger.log('Error searching after retries: $e');
       return <String, List<MediaItem>>{'artists': [], 'albums': [], 'tracks': []};
     });
+  }
+
+  /// Deduplicate search results by name (case-insensitive)
+  /// Prefers library items (provider='library') over provider-specific items
+  /// since library items have complete provider mappings
+  List<T> _deduplicateResults<T extends MediaItem>(List<T> items) {
+    final Map<String, T> seen = {};
+
+    for (final item in items) {
+      // Use lowercase name as key for deduplication
+      final key = item.name.toLowerCase();
+      final existing = seen[key];
+      if (existing == null) {
+        // First time seeing this name
+        seen[key] = item;
+      } else if (item.provider == 'library' && existing.provider != 'library') {
+        // Prefer library item over provider item
+        seen[key] = item;
+      }
+      // Otherwise keep the existing item (first occurrence or already library)
+    }
+
+    return seen.values.toList();
   }
 
   // ============================================================================
