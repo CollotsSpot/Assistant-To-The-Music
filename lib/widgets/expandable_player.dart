@@ -172,13 +172,15 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
   void _openQueue() {
     print('🎵 _openQueue called!');
-    // Use the State's context, not the shadowed builder context
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Queue button works!')),
-    );
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(builder: (_) => const QueueScreen()),
-    );
+    // Collapse first, then navigate after a delay
+    collapse();
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const QueueScreen()),
+        );
+      }
+    });
   }
 
   @override
@@ -648,7 +650,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                     ),
                   ),
 
-                // TEST: Down arrow now opens queue
+                // Collapse button (expanded only)
                 if (t > 0.3)
                   Positioned(
                     top: topPadding + 4,
@@ -657,22 +659,22 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                       opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
                       child: IconButton(
                         icon: Icon(Icons.keyboard_arrow_down_rounded, color: textColor, size: 28),
-                        onPressed: () => _openQueue(),
+                        onPressed: collapse,
                         padding: const EdgeInsets.all(12),
                       ),
                     ),
                   ),
 
-                // TEST: Queue icon now collapses
+                // Queue button (expanded only)
                 if (t > 0.3)
                   Positioned(
                     top: topPadding + 4,
-                    left: 52,
+                    right: 4,
                     child: Opacity(
                       opacity: ((t - 0.3) / 0.7).clamp(0.0, 1.0),
                       child: IconButton(
                         icon: Icon(Icons.queue_music_rounded, color: textColor, size: 24),
-                        onPressed: collapse,
+                        onPressed: _openQueue,
                         padding: const EdgeInsets.all(12),
                       ),
                     ),
