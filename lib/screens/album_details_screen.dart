@@ -660,7 +660,16 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                                 ),
                               )
                             : null,
-                        onTap: () => _playTrack(index),
+                        onTap: () {
+                          if (isExpanded) {
+                            // Single tap to collapse when expanded
+                            setState(() {
+                              _expandedTrackIndex = null;
+                            });
+                          } else {
+                            _playTrack(index);
+                          }
+                        },
                         onLongPress: () {
                           setState(() {
                             _expandedTrackIndex = isExpanded ? null : index;

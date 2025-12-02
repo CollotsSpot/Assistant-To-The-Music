@@ -131,12 +131,17 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
         final textTheme = Theme.of(context).textTheme;
         final currentTrack = maProvider.currentTrack;
 
-        return DraggableScrollableSheet(
-          initialChildSize: 0.7,
-          minChildSize: 0.4,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Container(
+        return GestureDetector(
+          onTap: () => Navigator.pop(context), // Tap outside to dismiss
+          behavior: HitTestBehavior.opaque,
+          child: DraggableScrollableSheet(
+            initialChildSize: 0.7,
+            minChildSize: 0.4,
+            maxChildSize: 0.9,
+            builder: (context, scrollController) {
+              return GestureDetector(
+                onTap: () {}, // Prevent taps on sheet from dismissing
+                child: Container(
               decoration: BoxDecoration(
                 color: colorScheme.surface,
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -370,8 +375,10 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
                   ),
                 ],
               ),
+            ),
             );
           },
+          ),
         );
       },
     );

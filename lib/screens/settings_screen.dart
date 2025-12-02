@@ -437,41 +437,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 12),
                   Consumer<ThemeProvider>(
                     builder: (context, themeProvider, _) {
-                      return SegmentedButton<ThemeMode>(
-                        segments: const [
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.light,
-                            label: Text('Light'),
-                            icon: Icon(Icons.light_mode_rounded),
+                      return SizedBox(
+                        width: double.infinity,
+                        child: SegmentedButton<ThemeMode>(
+                          segments: const [
+                            ButtonSegment<ThemeMode>(
+                              value: ThemeMode.light,
+                              label: Text('Light'),
+                              icon: Icon(Icons.light_mode_rounded),
+                            ),
+                            ButtonSegment<ThemeMode>(
+                              value: ThemeMode.dark,
+                              label: Text('Dark'),
+                              icon: Icon(Icons.dark_mode_rounded),
+                            ),
+                            ButtonSegment<ThemeMode>(
+                              value: ThemeMode.system,
+                              label: Text('System'),
+                              icon: Icon(Icons.auto_mode_rounded),
+                            ),
+                          ],
+                          selected: {themeProvider.themeMode},
+                          onSelectionChanged: (Set<ThemeMode> newSelection) {
+                            themeProvider.setThemeMode(newSelection.first);
+                          },
+                          style: ButtonStyle(
+                            backgroundColor: MaterialStateProperty.resolveWith((states) {
+                              if (states.contains(MaterialState.selected)) {
+                                return colorScheme.primaryContainer;
+                              }
+                              return Colors.transparent;
+                            }),
+                            foregroundColor: MaterialStateProperty.resolveWith((states) {
+                              if (states.contains(MaterialState.selected)) {
+                                return colorScheme.onPrimaryContainer;
+                              }
+                              return colorScheme.onSurfaceVariant;
+                            }),
                           ),
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.dark,
-                            label: Text('Dark'),
-                            icon: Icon(Icons.dark_mode_rounded),
-                          ),
-                          ButtonSegment<ThemeMode>(
-                            value: ThemeMode.system,
-                            label: Text('System'),
-                            icon: Icon(Icons.auto_mode_rounded),
-                          ),
-                        ],
-                        selected: {themeProvider.themeMode},
-                        onSelectionChanged: (Set<ThemeMode> newSelection) {
-                          themeProvider.setThemeMode(newSelection.first);
-                        },
-                        style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.resolveWith((states) {
-                            if (states.contains(MaterialState.selected)) {
-                              return colorScheme.primaryContainer;
-                            }
-                            return Colors.transparent;
-                          }),
-                          foregroundColor: MaterialStateProperty.resolveWith((states) {
-                            if (states.contains(MaterialState.selected)) {
-                              return colorScheme.onPrimaryContainer;
-                            }
-                            return colorScheme.onSurfaceVariant;
-                          }),
                         ),
                       );
                     },

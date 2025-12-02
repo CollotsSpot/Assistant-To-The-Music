@@ -57,13 +57,13 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 350),
       vsync: this,
     );
     _expandAnimation = CurvedAnimation(
       parent: _controller,
-      curve: Curves.easeOutCubic,
-      reverseCurve: Curves.easeInCubic,
+      curve: Curves.easeOutExpo,
+      reverseCurve: Curves.easeInExpo,
     );
 
     _controller.addStatusListener((status) {
@@ -284,7 +284,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     final maxArtSize = screenSize.width - (contentPadding * 2);
     final expandedArtSize = (maxArtSize * 0.92).clamp(280.0, 400.0);
     final artSize = _lerpDouble(_collapsedArtSize, expandedArtSize, t);
-    final artBorderRadius = _lerpDouble(_collapsedBorderRadius, 12, t);
+    final artBorderRadius = _lerpDouble(0, 12, t); // Square in mini player, rounded when expanded
 
     // Art position
     final collapsedArtLeft = 0.0;
@@ -360,6 +360,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
       right: horizontalMargin,
       bottom: bottomOffset,
       child: GestureDetector(
+        // Use translucent to allow child widgets (like buttons) to receive taps
+        behavior: HitTestBehavior.translucent,
         onTap: () {
           if (!isExpanded) expand();
         },
