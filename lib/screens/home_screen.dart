@@ -4,6 +4,7 @@ import '../theme/theme_provider.dart';
 import '../widgets/global_player_overlay.dart';
 import 'new_home_screen.dart';
 import 'new_library_screen.dart';
+import 'queue_screen.dart';
 import 'search_screen.dart';
 import 'settings_screen.dart';
 
@@ -113,6 +114,15 @@ class _HomeScreenState extends State<HomeScreen> {
           child: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: (index) {
+              // Queue button - push as separate screen (for testing)
+              if (index == 4) {
+                print('🎵 Bottom nav Queue tapped!');
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const QueueScreen()),
+                );
+                return;
+              }
+
               // Collapse player if expanded
               if (GlobalPlayerOverlay.isPlayerExpanded) {
                 GlobalPlayerOverlay.collapsePlayer();
@@ -165,6 +175,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.settings_outlined),
                 activeIcon: Icon(Icons.settings_rounded),
                 label: 'Settings',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.queue_music_outlined),
+                activeIcon: Icon(Icons.queue_music_rounded),
+                label: 'Queue',
               ),
             ],
           ),

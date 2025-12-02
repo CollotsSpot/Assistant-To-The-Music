@@ -172,14 +172,12 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
   void _openQueue() {
     print('🎵 _openQueue called!');
-    // Collapse first, then navigate after a delay
-    collapse();
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const QueueScreen()),
-        );
-      }
+    // Navigate immediately, then collapse
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const QueueScreen()),
+    ).then((_) {
+      // Collapse when returning from queue screen
+      if (mounted) collapse();
     });
   }
 
