@@ -139,7 +139,42 @@ void initState() {
 }
 ```
 
+### Attempt 10: Test Queue from Bottom Nav Bar
+- **Theory**: Isolate whether problem is QueueScreen/Navigator.push or the player context
+- **Fix**: Added temporary Queue button to bottom nav bar using identical Navigator.push code
+- **Result**: SUCCESS - Queue screen opened perfectly
+- **Insight**: QueueScreen and Navigator.push work fine. Problem is specific to the expandable player widget.
+
+### Attempt 11: addPostFrameCallback to defer navigation
+- **Theory**: Animation/build context blocking the callback
+- **Fix**: Wrapped navigation in `WidgetsBinding.instance.addPostFrameCallback`
+- **Result**: FAILED - no logs appeared, `_openQueue` never called
+
+## Confirmed Root Cause
+The `onPressed` callback of the IconButton inside the expandable player **never fires**, despite showing ripple feedback. The parent `GestureDetector` (which handles expand/collapse via `onTap` and `onVerticalDragUpdate`) is likely winning the gesture arena and consuming the tap before it reaches the button.
+
+Key evidence:
+- Bottom nav bar Queue button works perfectly (same Navigator.push code)
+- No print statements inside `_openQueue` ever appear in logs
+- Ripple shows but callback doesn't execute
+- `HitTestBehavior.translucent` on parent doesn't help
+- `Listener` at pointer level was tried and didn't help
+
+## Proposed Solutions - Player Restructure
+
+Since the current in-place expansion approach creates unsolvable gesture conflicts, consider restructuring:
+
+1. **Separate route for fullscreen player**: Mini player tap does `Navigator.push` to `FullscreenPlayerScreen`. Use `PageRouteBuilder` with custom slide-up/hero transitions. Clean separation, no gesture conflicts.
+
+2. **Nested Navigator**: Wrap player in its own `Navigator` for isolated navigation stack. Queue pushes within that navigator.
+
+3. **Overlay-based approach**: Use `Overlay.of(context).insert()` to manage player as true overlay with its own context/build tree.
+
+4. **showGeneralDialog for expanded state**: Mini player stays as-is, expansion opens as transparent fullscreen dialog/route.
+
+**Recommendation**: Option 1 (separate route with custom transitions) is cleanest and most Flutter-idiomatic. Keeps animations via hero widgets and PageRouteBuilder, eliminates gesture conflicts entirely.
+
 ## Next Steps
-1. Test the QueueScreen fixes
-2. If still failing, check API getQueue response
-3. Verify Provider is accessible from pushed route context
+1. Choose restructure approach
+2. Implement new player architecture
+3. Migrate existing animations to route transitions
