@@ -84,25 +84,27 @@ class _GlobalPlayerOverlayState extends State<GlobalPlayerOverlay>
       children: [
         // The main app content (Navigator, screens, etc.)
         widget.child,
-        // Global player overlay - slides down when hidden
-        AnimatedBuilder(
-          animation: _slideAnimation,
-          builder: (context, child) {
-            return Consumer<MusicAssistantProvider>(
-              builder: (context, maProvider, _) {
-                // Only show player if connected and has a track
-                if (!maProvider.isConnected ||
-                    maProvider.currentTrack == null ||
-                    maProvider.selectedPlayer == null) {
-                  return const SizedBox.shrink();
-                }
-                return ExpandablePlayer(
-                  key: globalPlayerKey,
-                  slideOffset: _slideAnimation.value,
-                );
-              },
-            );
-          },
+        // Global player overlay - wrapped in RepaintBoundary for isolation
+        RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: _slideAnimation,
+            builder: (context, child) {
+              return Selector<MusicAssistantProvider, (bool, bool, bool)>(
+                selector: (_, p) => (p.isConnected, p.currentTrack != null, p.selectedPlayer != null),
+                builder: (context, data, _) {
+                  final (isConnected, hasTrack, hasPlayer) = data;
+                  // Only show player if connected and has a track
+                  if (!isConnected || !hasTrack || !hasPlayer) {
+                    return const SizedBox.shrink();
+                  }
+                  return ExpandablePlayer(
+                    key: globalPlayerKey,
+                    slideOffset: _slideAnimation.value,
+                  );
+                },
+              );
+            },
+          ),
         ),
       ],
     );

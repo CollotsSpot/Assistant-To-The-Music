@@ -26,33 +26,46 @@ class ArtistCard extends StatelessWidget {
     
     final suffix = heroTagSuffix != null ? '_$heroTagSuffix' : '';
 
-    return GestureDetector(
-      onTap: onTap ?? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ArtistDetailsScreen(
-              artist: artist,
-              heroTagSuffix: heroTagSuffix,
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap ?? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ArtistDetailsScreen(
+                artist: artist,
+                heroTagSuffix: heroTagSuffix,
+              ),
             ),
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Artist image - circular
-          Hero(
-            tag: HeroTags.artistImage + (artist.uri ?? artist.itemId) + suffix,
-            child: CircleAvatar(
-              radius: 55, 
-              backgroundColor: colorScheme.surfaceVariant,
-              backgroundImage: imageUrl != null ? NetworkImage(imageUrl) : null,
-              child: imageUrl == null
-                  ? Icon(Icons.person_rounded, size: 60, color: colorScheme.onSurfaceVariant)
-                  : null,
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Artist image - circular
+            Hero(
+              tag: HeroTags.artistImage + (artist.uri ?? artist.itemId) + suffix,
+              child: ClipOval(
+                child: Container(
+                  width: 110,
+                  height: 110,
+                  color: colorScheme.surfaceVariant,
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          cacheWidth: 256,
+                          cacheHeight: 256,
+                          errorBuilder: (_, __, ___) => Icon(
+                            Icons.person_rounded,
+                            size: 60,
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        )
+                      : Icon(Icons.person_rounded, size: 60, color: colorScheme.onSurfaceVariant),
+                ),
+              ),
             ),
-          ),
           const SizedBox(height: 12),
           // Artist name
           Hero(
@@ -71,7 +84,8 @@ class ArtistCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

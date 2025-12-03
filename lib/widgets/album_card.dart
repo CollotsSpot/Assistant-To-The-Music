@@ -26,49 +26,54 @@ class AlbumCard extends StatelessWidget {
     
     final suffix = heroTagSuffix != null ? '_$heroTagSuffix' : '';
 
-    return GestureDetector(
-      onTap: onTap ?? () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => AlbumDetailsScreen(
-              album: album,
-              heroTagSuffix: heroTagSuffix,
-            ),
-          ),
-        );
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Album artwork
-          AspectRatio(
-            aspectRatio: 1.0,
-            child: Hero(
-              tag: HeroTags.albumCover + (album.uri ?? album.itemId) + suffix,
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.0),
-                  color: colorScheme.surfaceVariant,
-                  image: imageUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(imageUrl),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                child: imageUrl == null
-                    ? Center(
-                        child: Icon(
-                          Icons.album_rounded,
-                          size: 64,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      )
-                    : null,
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap ?? () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AlbumDetailsScreen(
+                album: album,
+                heroTagSuffix: heroTagSuffix,
               ),
             ),
-          ),
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Album artwork
+            AspectRatio(
+              aspectRatio: 1.0,
+              child: Hero(
+                tag: HeroTags.albumCover + (album.uri ?? album.itemId) + suffix,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: Container(
+                    color: colorScheme.surfaceVariant,
+                    child: imageUrl != null
+                        ? Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            cacheWidth: 256,
+                            cacheHeight: 256,
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.album_rounded,
+                              size: 64,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.album_rounded,
+                              size: 64,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
           const SizedBox(height: 8),
           // Album title
           Hero(
@@ -101,7 +106,8 @@ class AlbumCard extends StatelessWidget {
               ),
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

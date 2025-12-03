@@ -144,7 +144,7 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
   
   @override
   Widget build(BuildContext context) {
-    final maProvider = context.watch<MusicAssistantProvider>();
+    final maProvider = context.read<MusicAssistantProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final imageUrl = maProvider.getImageUrl(widget.artist, size: 512);
 
