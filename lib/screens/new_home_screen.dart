@@ -56,11 +56,9 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
         ],
       ),
       body: SafeArea(
-        child: Selector<MusicAssistantProvider, bool>(
-          selector: (_, p) => p.isConnected,
-          builder: (context, isConnected, child) {
-            final maProvider = context.read<MusicAssistantProvider>();
-            return !isConnected
+        child: Consumer<MusicAssistantProvider>(
+          builder: (context, maProvider, child) {
+            return !maProvider.isConnected
                 ? _buildDisconnectedView(context, maProvider)
                 : RefreshIndicator(
                     onRefresh: _onRefresh,
