@@ -1343,6 +1343,43 @@ class MusicAssistantAPI {
     }
   }
 
+  /// Remove a player completely from Music Assistant
+  /// This performs a 3-step removal process:
+  /// 1. Unregister from builtin player system (if applicable)
+  /// 2. Remove from runtime player manager
+  /// 3. Delete persistent config
+  Future<void> removePlayer(String playerId) async {
+    _logger.log('🗑️ Removing player: $playerId');
+
+    // Step 1: Unregister builtin player (disconnect it from runtime)
+    try {
+      await _sendCommand('builtin_player/unregister', args: {'player_id': playerId});
+      _logger.log('   ✓ Step 1: Unregistered from builtin player system');
+    } catch (e) {
+      _logger.log('   ⚠️ Step 1: Not a builtin player or already unregistered');
+    }
+
+    // Step 2: Remove from runtime player manager
+    try {
+      await _sendCommand('players/remove', args: {'player_id': playerId});
+      _logger.log('   ✓ Step 2: Removed from player manager');
+    } catch (e) {
+      _logger.log('   ⚠️ Step 2: Not in player manager');
+    }
+
+    // Step 3: Delete persistent config (this is what makes it permanent)
+    try {
+      await _sendCommand('config/players/remove', args: {'player_id': playerId});
+      _logger.log('   ✅ Step 3: Deleted persistent config');
+    } catch (e) {
+      _logger.log('   ❌ Step 3 failed: Could not delete config: $e');
+      // This is the critical step - if it fails, throw
+      throw Exception('Failed to delete player config: $e');
+    }
+
+    _logger.log('✅ Player $playerId removed successfully');
+  }
+
   /// Clean up ghost players (duplicate app player registrations)
   /// Set `allUnavailable` to true to remove ALL unavailable players (user-triggered)
   /// Set `allUnavailable` to false to only remove app-specific ghosts (auto-cleanup)

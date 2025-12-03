@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/debug_logger.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/player.dart';
+import 'ghost_player_cleanup_screen.dart';
 
 class DebugLogScreen extends StatefulWidget {
   const DebugLogScreen({super.key});
@@ -226,18 +227,12 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
                   _showAllPlayers();
                   break;
                 case 'cleanup_ghosts':
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cleaning up ghost players...')),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const GhostPlayerCleanupScreen(),
+                    ),
                   );
-                  final (removed, failed) = await maProvider.purgeUnavailablePlayers();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Removed $removed ghost(s), $failed failed'),
-                        backgroundColor: failed > 0 ? Colors.orange : Colors.green,
-                      ),
-                    );
-                  }
                   break;
                 case 'repair_corrupt':
                   ScaffoldMessenger.of(context).showSnackBar(
