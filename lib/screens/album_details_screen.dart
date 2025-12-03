@@ -318,7 +318,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    final maProvider = context.read<MusicAssistantProvider>();
+    final maProvider = context.watch<MusicAssistantProvider>();
     final themeProvider = context.watch<ThemeProvider>();
     final imageUrl = maProvider.getImageUrl(widget.album, size: 512);
     
