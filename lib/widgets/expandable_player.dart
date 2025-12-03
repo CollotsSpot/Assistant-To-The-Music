@@ -61,7 +61,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
     _expandAnimation = CurvedAnimation(
@@ -133,6 +133,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   }
 
   void collapse() {
+    // Instantly hide queue panel when collapsing to avoid visual glitches
+    // during Android's predictive back gesture
+    _queuePanelController.value = 0;
     _controller.reverse();
   }
 
