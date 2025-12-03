@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_strategy.dart';
 import 'no_auth_strategy.dart';
 import 'basic_auth_strategy.dart';
 import 'authelia_strategy.dart';
+import 'ma_auth_strategy.dart';
 import '../debug_logger.dart';
 
 /// Central authentication manager
@@ -15,6 +17,7 @@ class AuthManager {
     NoAuthStrategy(),
     BasicAuthStrategy(),
     AutheliaStrategy(),
+    MusicAssistantAuthStrategy(),
   ];
 
   AuthStrategy? _currentStrategy;
@@ -34,10 +37,32 @@ class AuthManager {
     // Normalize URL
     var baseUrl = serverUrl;
     if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
-      baseUrl = 'https://$baseUrl';
+      // Use http for local IPs, https for domains
+      if (baseUrl.startsWith('192.') ||
+          baseUrl.startsWith('10.') ||
+          baseUrl.startsWith('172.') ||
+          baseUrl == 'localhost' ||
+          baseUrl.startsWith('127.')) {
+        baseUrl = 'http://$baseUrl';
+      } else {
+        baseUrl = 'https://$baseUrl';
+      }
     }
 
-    // Try no-auth first (fastest and most common for local deployments)
+    // First, check if this is a Music Assistant server with native auth
+    _logger.log('Checking for Music Assistant native auth...');
+    final maAuthResult = await _checkMusicAssistantAuth(baseUrl);
+    if (maAuthResult != null) {
+      if (maAuthResult == 'required') {
+        _logger.log('✓ Detected Music Assistant native authentication');
+        return _strategies.firstWhere((s) => s.name == 'music_assistant');
+      } else if (maAuthResult == 'none') {
+        _logger.log('✓ Music Assistant server - no auth required');
+        return _strategies.firstWhere((s) => s.name == 'none');
+      }
+    }
+
+    // Try no-auth (direct connection without any auth)
     _logger.log('Testing no-auth strategy...');
     final canConnect = await _canConnectWithoutAuth(baseUrl);
     _logger.log('No-auth result: $canConnect');
@@ -47,7 +72,7 @@ class AuthManager {
       return _strategies.firstWhere((s) => s.name == 'none');
     }
 
-    // Probe server for auth requirements
+    // Probe server for auth requirements (reverse proxy scenarios)
     try {
       _logger.log('Probing server for auth headers...');
       // Test root endpoint
@@ -83,10 +108,10 @@ class AuthManager {
           return _strategies.firstWhere((s) => s.name == 'basic');
         }
 
-        // Check for Bearer token (future: Home Assistant or OAuth)
+        // Check for Bearer token - could be MA native auth
         if (wwwAuth != null && wwwAuth.contains('bearer')) {
-          _logger.log('⚠️ Detected Bearer auth (not yet supported)');
-          return null;
+          _logger.log('✓ Detected Bearer auth - likely Music Assistant native');
+          return _strategies.firstWhere((s) => s.name == 'music_assistant');
         }
       }
 
@@ -104,6 +129,72 @@ class AuthManager {
 
     _logger.log('⚠️ Could not determine auth method');
     return null;
+  }
+
+  /// Check if server is a Music Assistant server with native auth
+  /// Returns 'required' if auth needed, 'none' if no auth, null if not MA or error
+  Future<String?> _checkMusicAssistantAuth(String baseUrl) async {
+    try {
+      final uri = Uri.parse(baseUrl);
+      final apiUrl = Uri(
+        scheme: uri.scheme,
+        host: uri.host,
+        port: uri.hasPort ? uri.port : (uri.scheme == 'https' ? null : 8095),
+        path: '/api',
+      );
+
+      _logger.log('Checking MA API at: $apiUrl');
+
+      // Try to get server info - this tells us if auth is required
+      final response = await http.post(
+        apiUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'command': 'server/info',
+        }),
+      ).timeout(const Duration(seconds: 5));
+
+      _logger.log('MA API response: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+        // Check if we got server info successfully (no auth required)
+        if (data.containsKey('result')) {
+          final result = data['result'] as Map<String, dynamic>?;
+          final serverVersion = result?['server_version'] as String?;
+          final schemaVersion = result?['schema_version'] as int?;
+
+          if (serverVersion != null) {
+            _logger.log('MA server version: $serverVersion, schema: $schemaVersion');
+
+            // Schema 28+ requires auth, but if we got here without auth, it's not enabled
+            return 'none';
+          }
+        }
+
+        // Check for auth error
+        if (data.containsKey('error_code')) {
+          final errorCode = data['error_code'] as int?;
+          // Error 50 = AuthenticationRequired
+          if (errorCode == 50) {
+            _logger.log('MA server requires authentication (error 50)');
+            return 'required';
+          }
+        }
+      }
+
+      // 401/403 means auth required
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        _logger.log('MA API returned ${response.statusCode} - auth required');
+        return 'required';
+      }
+
+      return null;
+    } catch (e) {
+      _logger.log('MA auth check error: $e');
+      return null;
+    }
   }
 
   /// Test if server is accessible without authentication

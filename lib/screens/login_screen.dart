@@ -193,6 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return 'HTTP Basic Auth';
       case 'authelia':
         return 'Authelia';
+      case 'music_assistant':
+        return 'Music Assistant Login';
       default:
         return 'Unknown';
     }
@@ -206,6 +208,8 @@ class _LoginScreenState extends State<LoginScreen> {
         return Icons.vpn_key_rounded;
       case 'authelia':
         return Icons.shield_rounded;
+      case 'music_assistant':
+        return Icons.music_note_rounded;
       default:
         return Icons.security_rounded;
     }
@@ -261,7 +265,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final provider = context.read<MusicAssistantProvider>();
 
       // Handle authentication based on detected strategy
-      if (_detectedAuthStrategy != null && _detectedAuthStrategy!.name != 'none') {
+      final isMaAuth = _detectedAuthStrategy?.name == 'music_assistant';
+
+      if (_detectedAuthStrategy != null && _detectedAuthStrategy!.name != 'none' && !isMaAuth) {
+        // Pre-connect auth (Authelia, Basic Auth)
         final username = _usernameController.text.trim();
         final password = _passwordController.text.trim();
 
@@ -319,6 +326,63 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Connect to server
       await provider.connectToServer(serverUrl);
+
+      // Post-connect auth (Music Assistant native auth)
+      if (isMaAuth) {
+        final username = _usernameController.text.trim();
+        final password = _passwordController.text.trim();
+
+        if (username.isEmpty || password.isEmpty) {
+          setState(() {
+            _error = 'Please enter username and password';
+            _isConnecting = false;
+          });
+          return;
+        }
+
+        _addDebugLog('Authenticating with Music Assistant...');
+
+        // Check if we have a stored MA token first
+        final storedToken = await SettingsService.getMaAuthToken();
+        bool authSuccess = false;
+
+        if (storedToken != null) {
+          _addDebugLog('Trying stored MA token...');
+          authSuccess = await provider.api.authenticateWithToken(storedToken);
+        }
+
+        if (!authSuccess) {
+          _addDebugLog('Logging in with credentials...');
+          // Login with credentials over WebSocket
+          final accessToken = await provider.api.loginWithCredentials(username, password);
+
+          if (accessToken == null) {
+            setState(() {
+              _error = 'Music Assistant login failed. Please check your credentials.';
+              _isConnecting = false;
+            });
+            return;
+          }
+
+          // Try to create a long-lived token for future use
+          final longLivedToken = await provider.api.createLongLivedToken();
+          final tokenToStore = longLivedToken ?? accessToken;
+
+          // Save the token for future auto-login
+          await SettingsService.setMaAuthToken(tokenToStore);
+          _addDebugLog('MA token saved for future logins');
+        }
+
+        // Save credentials for future auto-login
+        await SettingsService.setUsername(username);
+        await SettingsService.setPassword(password);
+
+        // Save auth strategy info
+        await SettingsService.setAuthCredentials({
+          'strategy': 'music_assistant',
+          'data': {'username': username},
+        });
+      }
 
       // Wait a moment for connection to establish
       await Future.delayed(const Duration(milliseconds: 500));

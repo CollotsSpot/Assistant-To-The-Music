@@ -18,6 +18,8 @@ enum MAConnectionState {
   disconnected,
   connecting,
   connected,
+  authenticating,
+  authenticated,
   error,
 }
 
@@ -41,6 +43,18 @@ class MusicAssistantAPI {
 
   // Cached custom port setting
   int? _cachedCustomPort;
+
+  // Server info from initial connection
+  Map<String, dynamic>? _serverInfo;
+  bool _authRequired = false;
+  int? _schemaVersion;
+
+  // Auth state
+  bool _isAuthenticated = false;
+  bool get isAuthenticated => _isAuthenticated;
+  bool get authRequired => _authRequired;
+  int? get schemaVersion => _schemaVersion;
+  Map<String, dynamic>? get serverInfo => _serverInfo;
 
   MusicAssistantAPI(this.serverUrl, this.authManager);
 
@@ -213,7 +227,25 @@ class MusicAssistantAPI {
 
       // Check for server info message (first message on connect)
       if (data.containsKey('server_version')) {
-        _logger.log('Received server info: ${data['server_version']}');
+        _serverInfo = data;
+        _schemaVersion = data['schema_version'] as int?;
+        final serverVersion = data['server_version'] as String?;
+
+        _logger.log('Received server info: $serverVersion (schema: $_schemaVersion)');
+
+        // Check if authentication is required (schema 28+)
+        // The server sends 'needs_auth' or 'auth_enabled' field
+        final needsAuth = data['needs_auth'] as bool? ?? false;
+        final authEnabled = data['auth_enabled'] as bool? ?? false;
+        _authRequired = needsAuth || authEnabled || (_schemaVersion != null && _schemaVersion! >= 28);
+
+        if (_authRequired) {
+          _logger.log('🔐 Server requires authentication (schema $_schemaVersion)');
+        } else {
+          _logger.log('✓ Server does not require authentication');
+          _isAuthenticated = true; // No auth needed = effectively authenticated
+        }
+
         _updateConnectionState(MAConnectionState.connected);
         _connectionCompleter?.complete();
 
@@ -268,7 +300,13 @@ class MusicAssistantAPI {
     String command, {
     Map<String, dynamic>? args,
   }) async {
-    if (_currentState != MAConnectionState.connected) {
+    // Allow commands when connected, authenticating, or authenticated
+    final allowedStates = [
+      MAConnectionState.connected,
+      MAConnectionState.authenticating,
+      MAConnectionState.authenticated,
+    ];
+    if (!allowedStates.contains(_currentState)) {
       throw Exception('Not connected to Music Assistant server');
     }
 
@@ -1814,6 +1852,134 @@ class MusicAssistantAPI {
     // Use the imageproxy endpoint
     return '$baseUrl/imageproxy?provider=${Uri.encodeComponent(provider ?? "")}&size=$size&fmt=jpeg&path=${Uri.encodeComponent(imagePath)}';
   }
+
+  // ==================== Authentication Methods ====================
+
+  /// Authenticate the WebSocket session with a token
+  /// Call this after connect() if authRequired is true
+  Future<bool> authenticateWithToken(String token) async {
+    if (_currentState != MAConnectionState.connected) {
+      _logger.log('Cannot authenticate - not connected');
+      return false;
+    }
+
+    try {
+      _logger.log('🔐 Authenticating WebSocket with token...');
+      _updateConnectionState(MAConnectionState.authenticating);
+
+      final response = await _sendCommand('auth', args: {'token': token});
+
+      // Check for success
+      if (response.containsKey('error_code')) {
+        _logger.log('❌ Authentication failed: ${response['error_code']} - ${response['details']}');
+        _isAuthenticated = false;
+        _updateConnectionState(MAConnectionState.connected);
+        return false;
+      }
+
+      _logger.log('✅ WebSocket authenticated successfully');
+      _isAuthenticated = true;
+      _updateConnectionState(MAConnectionState.authenticated);
+      return true;
+    } catch (e) {
+      _logger.log('❌ Authentication error: $e');
+      _isAuthenticated = false;
+      _updateConnectionState(MAConnectionState.connected);
+      return false;
+    }
+  }
+
+  /// Login with username/password over WebSocket and authenticate
+  /// Returns the access token on success, null on failure
+  Future<String?> loginWithCredentials(String username, String password) async {
+    if (_currentState != MAConnectionState.connected) {
+      _logger.log('Cannot login - not connected');
+      return null;
+    }
+
+    try {
+      _logger.log('🔐 Logging in with credentials...');
+      _updateConnectionState(MAConnectionState.authenticating);
+
+      // Step 1: Login to get access token
+      final loginResponse = await _sendCommand('auth/login', args: {
+        'username': username,
+        'password': password,
+      });
+
+      if (loginResponse.containsKey('error_code')) {
+        _logger.log('❌ Login failed: ${loginResponse['error_code']} - ${loginResponse['details']}');
+        _updateConnectionState(MAConnectionState.connected);
+        return null;
+      }
+
+      final result = loginResponse['result'] as Map<String, dynamic>?;
+      final accessToken = result?['access_token'] as String?;
+
+      if (accessToken == null) {
+        _logger.log('❌ No access token in login response');
+        _updateConnectionState(MAConnectionState.connected);
+        return null;
+      }
+
+      _logger.log('✓ Got access token, authenticating session...');
+
+      // Step 2: Authenticate the WebSocket with the token
+      final authResponse = await _sendCommand('auth', args: {'token': accessToken});
+
+      if (authResponse.containsKey('error_code')) {
+        _logger.log('❌ Session auth failed: ${authResponse['error_code']}');
+        _updateConnectionState(MAConnectionState.connected);
+        return null;
+      }
+
+      _logger.log('✅ Login and authentication successful');
+      _isAuthenticated = true;
+      _updateConnectionState(MAConnectionState.authenticated);
+
+      return accessToken;
+    } catch (e) {
+      _logger.log('❌ Login error: $e');
+      _updateConnectionState(MAConnectionState.connected);
+      return null;
+    }
+  }
+
+  /// Create a long-lived token for persistent authentication
+  /// Must be authenticated first
+  Future<String?> createLongLivedToken({String name = 'Ensemble Mobile App'}) async {
+    if (!_isAuthenticated) {
+      _logger.log('Cannot create token - not authenticated');
+      return null;
+    }
+
+    try {
+      _logger.log('Creating long-lived token...');
+
+      final response = await _sendCommand('auth/create_token', args: {
+        'name': name,
+      });
+
+      if (response.containsKey('error_code')) {
+        _logger.log('⚠️ Could not create long-lived token: ${response['error_code']}');
+        return null;
+      }
+
+      final result = response['result'] as Map<String, dynamic>?;
+      final token = result?['token'] as String?;
+
+      if (token != null) {
+        _logger.log('✅ Created long-lived token');
+      }
+
+      return token;
+    } catch (e) {
+      _logger.log('⚠️ Token creation error: $e');
+      return null;
+    }
+  }
+
+  // ==================== Connection State ====================
 
   void _updateConnectionState(MAConnectionState state) {
     _currentState = state;

@@ -6,6 +6,7 @@ class SettingsService {
   static const String _keyAuthServerUrl = 'auth_server_url';
   static const String _keyWebSocketPort = 'websocket_port';
   static const String _keyAuthToken = 'auth_token';
+  static const String _keyMaAuthToken = 'ma_auth_token'; // Music Assistant native auth token
   static const String _keyAuthCredentials = 'auth_credentials'; // NEW: Serialized auth strategy credentials
   static const String _keyUsername = 'username';
   static const String _keyPassword = 'password';
@@ -81,6 +82,28 @@ class SettingsService {
     } else {
       await prefs.setString(_keyAuthToken, token);
     }
+  }
+
+  // Get Music Assistant native auth token (long-lived token)
+  static Future<String?> getMaAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyMaAuthToken);
+  }
+
+  // Set Music Assistant native auth token (long-lived token)
+  static Future<void> setMaAuthToken(String? token) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (token == null || token.isEmpty) {
+      await prefs.remove(_keyMaAuthToken);
+    } else {
+      await prefs.setString(_keyMaAuthToken, token);
+    }
+  }
+
+  // Clear Music Assistant native auth token
+  static Future<void> clearMaAuthToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyMaAuthToken);
   }
 
   // Get authentication credentials (serialized auth strategy credentials)

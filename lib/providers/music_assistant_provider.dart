@@ -139,6 +139,59 @@ class MusicAssistantProvider with ChangeNotifier {
     }
   }
 
+  /// Handle Music Assistant native authentication after WebSocket connection
+  /// This is called when the server reports auth is required (schema 28+)
+  /// Returns true if authentication succeeded, false otherwise
+  Future<bool> _handleMaAuthentication() async {
+    if (_api == null) return false;
+
+    try {
+      // First, try stored MA token
+      final storedToken = await SettingsService.getMaAuthToken();
+      if (storedToken != null) {
+        _logger.log('🔐 Trying stored MA token...');
+        final success = await _api!.authenticateWithToken(storedToken);
+        if (success) {
+          _logger.log('✅ MA authentication with stored token successful');
+          return true;
+        }
+        _logger.log('⚠️ Stored MA token invalid, clearing...');
+        await SettingsService.clearMaAuthToken();
+      }
+
+      // No valid token - try stored credentials
+      final username = await SettingsService.getUsername();
+      final password = await SettingsService.getPassword();
+
+      if (username != null && password != null && username.isNotEmpty && password.isNotEmpty) {
+        _logger.log('🔐 Trying stored credentials...');
+        final accessToken = await _api!.loginWithCredentials(username, password);
+
+        if (accessToken != null) {
+          _logger.log('✅ MA login with stored credentials successful');
+
+          // Try to create and save a long-lived token for future use
+          final longLivedToken = await _api!.createLongLivedToken();
+          if (longLivedToken != null) {
+            await SettingsService.setMaAuthToken(longLivedToken);
+            _logger.log('✅ Saved new long-lived MA token');
+          } else {
+            // Fall back to access token
+            await SettingsService.setMaAuthToken(accessToken);
+          }
+
+          return true;
+        }
+      }
+
+      _logger.log('❌ MA authentication failed - no valid token or credentials');
+      return false;
+    } catch (e) {
+      _logger.log('❌ MA authentication error: $e');
+      return false;
+    }
+  }
+
   Future<void> _initializeLocalPlayback() async {
     await _localPlayer.initialize();
     _isLocalPlayerPowered = true; // Default to powered on when enabling local playback
@@ -331,28 +384,43 @@ class MusicAssistantProvider with ChangeNotifier {
           notifyListeners();
 
           if (state == MAConnectionState.connected) {
-          _logger.log('🔗 WebSocket connected to MA server');
+            _logger.log('🔗 WebSocket connected to MA server');
 
-          // STEP 1: Try to adopt an existing ghost player (fresh install only)
-          // This must happen BEFORE DeviceIdService generates a new ID
-          await _tryAdoptGhostPlayer();
+            // STEP 0: Handle MA native authentication if required
+            if (_api!.authRequired && !_api!.isAuthenticated) {
+              _logger.log('🔐 MA auth required, attempting authentication...');
+              final authenticated = await _handleMaAuthentication();
+              if (!authenticated) {
+                _logger.log('❌ MA authentication failed - stopping connection flow');
+                _error = 'Authentication required. Please log in again.';
+                notifyListeners();
+                return;
+              }
+            }
 
-          // STEP 2: Register local player
-          // DeviceIdService will use adopted ID if available, or generate new
-          await _registerLocalPlayer();
+            // STEP 1: Try to adopt an existing ghost player (fresh install only)
+            // This must happen BEFORE DeviceIdService generates a new ID
+            await _tryAdoptGhostPlayer();
 
-          // STEP 3: Clean up remaining ghost players (after registration)
-          await _cleanupGhostPlayers();
+            // STEP 2: Register local player
+            // DeviceIdService will use adopted ID if available, or generate new
+            await _registerLocalPlayer();
 
-          // STEP 4: Load available players and auto-select local player
-          await _loadAndSelectPlayers();
+            // STEP 3: Clean up remaining ghost players (after registration)
+            await _cleanupGhostPlayers();
 
-          // STEP 5: Auto-load library when connected
-          loadLibrary();
-        } else if (state == MAConnectionState.disconnected) {
-          _availablePlayers = [];
-          _selectedPlayer = null;
-        }
+            // STEP 4: Load available players and auto-select local player
+            await _loadAndSelectPlayers();
+
+            // STEP 5: Auto-load library when connected
+            loadLibrary();
+          } else if (state == MAConnectionState.authenticated) {
+            _logger.log('✅ MA authentication successful');
+            // Auth successful - the 'connected' handler will already run the rest
+          } else if (state == MAConnectionState.disconnected) {
+            _availablePlayers = [];
+            _selectedPlayer = null;
+          }
         },
         onError: (error) {
           _logger.log('Connection state stream error: $error');
