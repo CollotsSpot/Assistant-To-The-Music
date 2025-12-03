@@ -7,6 +7,7 @@ import '../constants/hero_tags.dart';
 import '../theme/palette_helper.dart';
 import '../theme/theme_provider.dart';
 import '../services/metadata_service.dart';
+import '../services/debug_logger.dart';
 
 class ArtistDetailsScreen extends StatefulWidget {
   final Artist artist;
@@ -23,6 +24,7 @@ class ArtistDetailsScreen extends StatefulWidget {
 }
 
 class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
+  final _logger = DebugLogger();
   List<Album> _albums = [];
   List<Album> _providerAlbums = [];
   bool _isLoading = true;
@@ -59,7 +61,7 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
         });
       }
     } catch (e) {
-      print('⚠️ Failed to extract colors for artist: $e');
+      _logger.log('Failed to extract colors for artist: $e');
     }
   }
 
@@ -120,7 +122,7 @@ class _ArtistDetailsScreenState extends State<ArtistDetailsScreen> {
           ).toList();
 
         } catch (e) {
-          print('Error searching provider albums: $e');
+          _logger.log('Error searching provider albums: $e');
         }
       }
 

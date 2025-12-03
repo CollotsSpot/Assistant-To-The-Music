@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/player.dart';
+import '../services/debug_logger.dart';
 
 class QueueScreen extends StatefulWidget {
   const QueueScreen({super.key});
@@ -11,6 +12,7 @@ class QueueScreen extends StatefulWidget {
 }
 
 class _QueueScreenState extends State<QueueScreen> {
+  final _logger = DebugLogger();
   PlayerQueue? _queue;
   bool _isLoading = true;
   String? _error;
@@ -53,7 +55,7 @@ class _QueueScreenState extends State<QueueScreen> {
         }
       }
     } catch (e) {
-      print('❌ QueueScreen error loading queue: $e');
+      _logger.log('QueueScreen error loading queue: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;

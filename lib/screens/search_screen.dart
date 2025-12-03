@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
+import '../services/debug_logger.dart';
 import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
@@ -13,8 +15,10 @@ class SearchScreen extends StatefulWidget {
 }
 
 class SearchScreenState extends State<SearchScreen> {
+  final _logger = DebugLogger();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
+  Timer? _debounceTimer;
   Map<String, List<MediaItem>> _searchResults = {
     'artists': [],
     'albums': [],
@@ -23,6 +27,7 @@ class SearchScreenState extends State<SearchScreen> {
   bool _isSearching = false;
   bool _hasSearched = false;
   String _activeFilter = 'all'; // 'all', 'artists', 'albums', 'tracks'
+  String? _searchError;
 
   @override
   void initState() {
@@ -45,9 +50,17 @@ class SearchScreenState extends State<SearchScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _performSearch(query);
+    });
   }
 
   Future<void> _performSearch(String query) async {
@@ -55,22 +68,37 @@ class SearchScreenState extends State<SearchScreen> {
       setState(() {
         _searchResults = {'artists': [], 'albums': [], 'tracks': []};
         _hasSearched = false;
+        _searchError = null;
       });
       return;
     }
 
     setState(() {
       _isSearching = true;
+      _searchError = null;
     });
 
-    final provider = context.read<MusicAssistantProvider>();
-    final results = await provider.search(query);
+    try {
+      final provider = context.read<MusicAssistantProvider>();
+      final results = await provider.search(query);
 
-    setState(() {
-      _searchResults = results;
-      _isSearching = false;
-      _hasSearched = true;
-    });
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+          _hasSearched = true;
+        });
+      }
+    } catch (e) {
+      _logger.log('Search error: $e');
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+          _hasSearched = true;
+          _searchError = 'Search failed. Please check your connection.';
+        });
+      }
+    }
   }
 
   @override
@@ -105,7 +133,7 @@ class SearchScreenState extends State<SearchScreen> {
           ),
           onChanged: (value) {
             setState(() {});
-            _performSearch(value);
+            _onSearchChanged(value);
           },
           onSubmitted: _performSearch,
         ),
@@ -171,6 +199,35 @@ class SearchScreenState extends State<SearchScreen> {
                 color: colorScheme.onBackground.withOpacity(0.5),
                 fontSize: 16,
               ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_searchError != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              size: 64,
+              color: colorScheme.error.withOpacity(0.7),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _searchError!,
+              style: TextStyle(
+                color: colorScheme.error,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton.tonal(
+              onPressed: () => _performSearch(_searchController.text),
+              child: const Text('Retry'),
             ),
           ],
         ),

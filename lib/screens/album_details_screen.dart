@@ -6,6 +6,7 @@ import '../constants/hero_tags.dart';
 import '../theme/palette_helper.dart';
 import '../theme/theme_provider.dart';
 import '../services/metadata_service.dart';
+import '../services/debug_logger.dart';
 import '../widgets/global_player_overlay.dart';
 import 'artist_details_screen.dart';
 
@@ -24,6 +25,7 @@ class AlbumDetailsScreen extends StatefulWidget {
 }
 
 class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTickerProviderStateMixin {
+  final _logger = DebugLogger();
   List<Track> _tracks = [];
   bool _isLoading = true;
   bool _isFavorite = false;
@@ -62,7 +64,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         });
       }
     } catch (e) {
-      print('⚠️ Failed to extract colors for album: $e');
+      _logger.log('Failed to extract colors for album: $e');
     }
   }
 
@@ -92,7 +94,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         );
       }
     } catch (e) {
-      print('Error toggling favorite: $e');
+      _logger.log('Error toggling favorite: $e');
     }
   }
 
@@ -122,17 +124,17 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         return;
       }
 
-      print('🎵 Queueing album on ${player.name}: ${player.playerId}');
+      _logger.log('Queueing album on ${player.name}: ${player.playerId}');
 
       // Queue all tracks via Music Assistant
       await maProvider.playTracks(player.playerId, _tracks, startIndex: 0);
-      print('✓ Album queued on ${player.name}');
+      _logger.log('Album queued on ${player.name}');
 
       if (mounted) {
         Navigator.pop(context);
       }
     } catch (e) {
-      print('Error playing album: $e');
+      _logger.log('Error playing album: $e');
       _showError('Failed to play album: $e');
     }
   }
@@ -148,17 +150,17 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         return;
       }
 
-      print('🎵 Queueing tracks on ${player.name} starting at index $index');
+      _logger.log('Queueing tracks on ${player.name} starting at index $index');
 
       // Queue tracks starting at the selected index
       await maProvider.playTracks(player.playerId, _tracks, startIndex: index);
-      print('✓ Tracks queued on ${player.name}');
+      _logger.log('Tracks queued on ${player.name}');
 
       if (mounted) {
         Navigator.pop(context);
       }
     } catch (e) {
-      print('Error playing track: $e');
+      _logger.log('Error playing track: $e');
       _showError('Failed to play track: $e');
     }
   }
@@ -173,11 +175,11 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         return;
       }
 
-      print('➕ Adding album to queue on ${player.name}');
+      _logger.log('Adding album to queue on ${player.name}');
 
       // Add all tracks to queue without clearing
       await maProvider.playTracks(player.playerId, _tracks, startIndex: 0, clearQueue: false);
-      print('✓ Album added to queue on ${player.name}');
+      _logger.log('Album added to queue on ${player.name}');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -188,7 +190,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
         );
       }
     } catch (e) {
-      print('Error adding album to queue: $e');
+      _logger.log('Error adding album to queue: $e');
       _showError('Failed to add album to queue: $e');
     }
   }
@@ -254,7 +256,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                             );
                           }
                         } catch (e) {
-                          print('Error adding to queue: $e');
+                          _logger.log('Error adding to queue: $e');
                           _showError('Failed to add to queue: $e');
                         }
                       },

@@ -27,14 +27,11 @@ dependencies:
 
   # Utilities
   uuid: ^4.2.1
-  device_info_plus: ^10.1.0
-  crypto: ^3.0.3
 
   # Audio - Local Playback
   just_audio: ^0.9.36
   audio_service: ^0.18.12
   audio_session: ^0.1.18
-  rxdart: ^0.27.7
 
 dev_dependencies:
   flutter_test:
