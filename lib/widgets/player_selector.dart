@@ -193,7 +193,7 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
                           )
                         : ListView.builder(
                             controller: scrollController,
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            padding: EdgeInsets.fromLTRB(12, 8, 12, BottomSpacing.navBarOnly),
                             itemCount: currentPlayers.length,
                             itemBuilder: (context, index) {
                               final player = currentPlayers[index];

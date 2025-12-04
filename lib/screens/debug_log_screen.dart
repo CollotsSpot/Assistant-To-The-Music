@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/debug_logger.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/player.dart';
+import '../widgets/global_player_overlay.dart';
 import 'ghost_player_cleanup_screen.dart';
 
 class DebugLogScreen extends StatefulWidget {
@@ -329,7 +330,7 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
                   )
                 : ListView.builder(
                     controller: _scrollController,
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.fromLTRB(8, 8, 8, BottomSpacing.navBarOnly + 56), // Extra space for FAB
                     itemCount: _logger.logs.length,
                     itemBuilder: (context, index) {
                       final log = _logger.logs[index];
@@ -371,20 +372,23 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {});
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              _scrollController.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
-            );
-          }
-        },
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1a1a1a),
-        child: const Icon(Icons.refresh_rounded),
+      floatingActionButton: Padding(
+        padding: EdgeInsets.only(bottom: BottomSpacing.navBarOnly),
+        child: FloatingActionButton(
+          onPressed: () {
+            setState(() {});
+            if (_scrollController.hasClients) {
+              _scrollController.animateTo(
+                _scrollController.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          },
+          backgroundColor: Colors.white,
+          foregroundColor: const Color(0xFF1a1a1a),
+          child: const Icon(Icons.refresh_rounded),
+        ),
       ),
     );
   }

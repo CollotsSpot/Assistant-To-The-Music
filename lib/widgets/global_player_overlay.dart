@@ -11,6 +11,15 @@ final globalPlayerKey = GlobalKey<ExpandablePlayerState>();
 /// Key for the overlay state to control visibility
 final _overlayStateKey = GlobalKey<_GlobalPlayerOverlayState>();
 
+/// Constants for bottom UI elements spacing
+class BottomSpacing {
+  /// Height of the bottom navigation bar
+  static const double navBarHeight = 56.0;
+
+  /// Space needed when only nav bar is visible (with some extra padding)
+  static const double navBarOnly = navBarHeight + 16.0;
+}
+
 /// ValueNotifier for player expansion progress (0.0 to 1.0) and background color
 class PlayerExpansionState {
   final double progress;

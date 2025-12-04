@@ -5,6 +5,7 @@ import '../constants/timings.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
 import '../services/debug_logger.dart';
+import '../widgets/global_player_overlay.dart';
 import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
@@ -292,7 +293,7 @@ class SearchScreenState extends State<SearchScreen> {
         // Results
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.fromLTRB(16, 8, 16, BottomSpacing.navBarOnly),
             children: [
               if ((_activeFilter == 'all' || _activeFilter == 'artists') && artists.isNotEmpty) ...[
                 if (_activeFilter == 'all') _buildSectionHeader('Artists', artists.length),

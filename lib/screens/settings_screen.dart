@@ -4,6 +4,7 @@ import '../providers/music_assistant_provider.dart';
 import '../services/music_assistant_api.dart';
 import '../services/settings_service.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/global_player_overlay.dart';
 import 'debug_log_screen.dart';
 import 'login_screen.dart';
 
@@ -435,7 +436,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            SizedBox(height: BottomSpacing.navBarOnly), // Space for bottom nav bar
           ],
         ),
       ),

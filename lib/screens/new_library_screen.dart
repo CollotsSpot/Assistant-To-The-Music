@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
+import '../widgets/global_player_overlay.dart';
 import '../widgets/player_selector.dart';
 import '../widgets/album_card.dart';
 import '../utils/page_transitions.dart';
@@ -191,7 +192,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
       onRefresh: () async => provider.loadLibrary(),
       child: ListView.builder(
         itemCount: provider.artists.length,
-        padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 140),
+        padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: BottomSpacing.navBarOnly),
         itemBuilder: (context, index) {
           final artist = provider.artists[index];
           return _buildArtistTile(context, artist, provider);
@@ -271,7 +272,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
       backgroundColor: colorScheme.surface,
       onRefresh: () async => provider.loadLibrary(),
       child: GridView.builder(
-        padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 140),
+        padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: BottomSpacing.navBarOnly),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
           childAspectRatio: 0.75,
@@ -313,7 +314,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
       onRefresh: _loadPlaylists,
       child: ListView.builder(
         itemCount: _playlists.length,
-        padding: const EdgeInsets.only(left: 8, right: 8, top: 8, bottom: 140),
+        padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: BottomSpacing.navBarOnly),
         itemBuilder: (context, index) {
           final playlist = _playlists[index];
           return _buildPlaylistTile(context, playlist, provider);

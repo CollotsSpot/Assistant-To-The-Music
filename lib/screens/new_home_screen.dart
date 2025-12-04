@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
+import '../widgets/global_player_overlay.dart';
 import '../widgets/player_selector.dart';
 import '../widgets/album_row.dart';
 import '../widgets/artist_row.dart';
@@ -191,7 +192,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
               return await provider.api!.getRandomAlbums(limit: 10);
             },
           ),
-          const SizedBox(height: 80), // Space for mini player
+          SizedBox(height: BottomSpacing.navBarOnly), // Space for bottom nav bar
         ],
         ),
       ),
