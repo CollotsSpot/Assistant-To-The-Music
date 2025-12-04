@@ -248,21 +248,27 @@ class MusicAssistantProvider with ChangeNotifier {
       // It matches the MA frontend's fetchState() behavior
       await _api!.fetchState();
 
-      // STEP 2: Try to adopt an existing ghost player (fresh install only)
+      // STEP 2: Fetch user profile to get display_name for player name
+      // This MUST happen BEFORE player registration so the name is correct
+      if (_api!.authRequired) {
+        await _fetchAndSetUserProfileName();
+      }
+
+      // STEP 3: Try to adopt an existing ghost player (fresh install only)
       // This must happen BEFORE DeviceIdService generates a new ID
       await _tryAdoptGhostPlayer();
 
-      // STEP 3: Register local player
+      // STEP 4: Register local player
       // DeviceIdService will use adopted ID if available, or generate new
       await _registerLocalPlayer();
 
-      // STEP 4: Clean up remaining ghost players (after registration)
+      // STEP 5: Clean up remaining ghost players (after registration)
       await _cleanupGhostPlayers();
 
-      // STEP 5: Load available players and auto-select local player
+      // STEP 6: Load available players and auto-select local player
       await _loadAndSelectPlayers();
 
-      // STEP 6: Auto-load library when connected
+      // STEP 7: Auto-load library when connected
       loadLibrary();
 
       _logger.log('✅ Post-connection initialization complete');
