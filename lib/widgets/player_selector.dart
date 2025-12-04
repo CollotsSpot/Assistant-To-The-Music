@@ -136,9 +136,9 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
           onTap: () => Navigator.pop(context), // Tap outside to dismiss
           behavior: HitTestBehavior.opaque,
           child: DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.4,
-            maxChildSize: 0.9,
+            initialChildSize: 0.85,
+            minChildSize: 0.5,
+            maxChildSize: 0.95,
             builder: (context, scrollController) {
               return GestureDetector(
                 onTap: () {}, // Prevent taps on sheet from dismissing

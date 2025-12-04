@@ -150,15 +150,10 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
 
   Widget _buildConnectedView(
       BuildContext context, MusicAssistantProvider provider) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    // Pass the unique key to force rebuild of children when refreshed
-    // Use ScrollConfiguration with glow effect instead of bounce
-    return ScrollConfiguration(
-      behavior: _GlowScrollBehavior(glowColor: colorScheme.primary),
-      child: SingleChildScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        child: Column(
+    // Use bounce/stretch physics for iOS-style overscroll
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      child: Column(
         key: _refreshKey,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -192,32 +187,9 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
               return await provider.api!.getRandomAlbums(limit: 10);
             },
           ),
-          SizedBox(height: BottomSpacing.navBarOnly), // Space for bottom nav bar
+          SizedBox(height: BottomSpacing.withMiniPlayer), // Space for bottom nav + mini player
         ],
-        ),
       ),
     );
-  }
-}
-
-/// Custom scroll behavior that shows glow effect on overscroll
-class _GlowScrollBehavior extends ScrollBehavior {
-  final Color glowColor;
-
-  const _GlowScrollBehavior({required this.glowColor});
-
-  @override
-  Widget buildOverscrollIndicator(
-      BuildContext context, Widget child, ScrollableDetails details) {
-    return GlowingOverscrollIndicator(
-      axisDirection: details.direction,
-      color: glowColor,
-      child: child,
-    );
-  }
-
-  @override
-  ScrollPhysics getScrollPhysics(BuildContext context) {
-    return const ClampingScrollPhysics();
   }
 }
