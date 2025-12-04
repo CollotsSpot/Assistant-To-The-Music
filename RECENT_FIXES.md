@@ -1,5 +1,33 @@
 # Recent Fixes - December 2025
 
+## Build c02bb92 - Music Assistant Native Auth Support
+
+### New Feature: MA 2.7.0+ Authentication
+Music Assistant 2.7.0 BETA 17 introduced mandatory built-in authentication. Ensemble now supports this:
+
+- **Auto-detection**: App detects if MA requires native auth (schema 28+)
+- **Login flow**: Username/password login over WebSocket after connection
+- **Token storage**: Long-lived tokens saved for automatic reconnection
+- **Backward compatible**: Still works with Authelia, Basic Auth, or no auth (for stable MA)
+
+### Auth Detection Logic
+1. Probes `/api` endpoint with `info` command
+2. 401 response or "Authentication required" → MA auth needed
+3. Falls back to Authelia/Basic detection if not MA
+
+### Files Changed
+- `lib/services/auth/ma_auth_strategy.dart` (new)
+- `lib/services/auth/auth_manager.dart` - MA detection
+- `lib/services/music_assistant_api.dart` - Post-connect auth, new states
+- `lib/screens/login_screen.dart` - MA auth UI flow
+- `lib/providers/music_assistant_provider.dart` - Auto-reconnect with MA auth
+- `lib/services/settings_service.dart` - MA token storage
+
+### Connection States
+Added `authenticating` and `authenticated` states to track MA auth progress.
+
+---
+
 ## Build 495ccce - UI Improvements
 
 ### 1. Removed Hero Animations
