@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/timings.dart';
@@ -45,7 +46,7 @@ class PlayerSelector extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
                 Icon(
-                  Icons.cast_rounded,
+                  MdiIcons.castAudio,
                   color: colorScheme.onPrimaryContainer,
                   size: 20,
                 ),
