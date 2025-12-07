@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:just_audio/just_audio.dart';
 import '../constants/timings.dart' show Timings, LibraryConstants;
 import '../models/media_item.dart';
@@ -33,6 +34,10 @@ class MusicAssistantProvider with ChangeNotifier {
   List<Player> _availablePlayers = [];
   Track? _currentTrack; // Current track playing on selected player
   Timer? _playerStateTimer;
+
+  // Cache for adjacent players' track info (for smooth swipe transitions)
+  final Map<String, Track?> _playerTrackCache = {};
+  Timer? _adjacentPlayerCacheTimer;
   
   // Local Playback - always enabled
   bool _isLocalPlayerPowered = true; // Track local player power state
@@ -411,6 +416,16 @@ class MusicAssistantProvider with ChangeNotifier {
   Player? get selectedPlayer => _selectedPlayer;
   List<Player> get availablePlayers => _availablePlayers;
   Track? get currentTrack => _currentTrack;
+
+  /// Get cached track for a player (used for smooth swipe transitions)
+  Track? getCachedTrackForPlayer(String playerId) => _playerTrackCache[playerId];
+
+  /// Get artwork URL for a player from cache (for preloading)
+  String? getCachedArtworkUrl(String playerId, {int size = 512}) {
+    final track = _playerTrackCache[playerId];
+    if (track == null) return null;
+    return getImageUrl(track, size: size);
+  }
 
   // Debug: Get ALL players including filtered ones
   Future<List<Player>> getAllPlayersUnfiltered() async {
@@ -1630,9 +1645,92 @@ class MusicAssistantProvider with ChangeNotifier {
     // Start polling for player state
     _startPlayerStatePolling();
 
+    // Preload adjacent players' track info for smooth swipe transitions
+    _preloadAdjacentPlayers();
+
     if (!skipNotify) {
       notifyListeners();
     }
+  }
+
+  /// Preload track info for adjacent players (next/prev in list)
+  Future<void> _preloadAdjacentPlayers() async {
+    if (_selectedPlayer == null || _api == null) return;
+
+    // Get sorted available players
+    final players = _availablePlayers.where((p) => p.available).toList();
+    if (players.length <= 1) return;
+
+    final currentIndex = players.indexWhere((p) => p.playerId == _selectedPlayer!.playerId);
+    if (currentIndex == -1) return;
+
+    // Get adjacent player indices (with wrap-around)
+    final prevIndex = currentIndex <= 0 ? players.length - 1 : currentIndex - 1;
+    final nextIndex = currentIndex >= players.length - 1 ? 0 : currentIndex + 1;
+
+    // Preload prev and next players
+    final playersToPreload = <Player>{};
+    if (prevIndex != currentIndex) playersToPreload.add(players[prevIndex]);
+    if (nextIndex != currentIndex) playersToPreload.add(players[nextIndex]);
+
+    for (final player in playersToPreload) {
+      _preloadPlayerTrack(player);
+    }
+  }
+
+  /// Preload track info for a specific player
+  Future<void> _preloadPlayerTrack(Player player) async {
+    if (_api == null) return;
+
+    try {
+      // Only fetch if player is playing or paused
+      if (player.state != 'playing' && player.state != 'paused') {
+        _playerTrackCache[player.playerId] = null;
+        return;
+      }
+
+      final queue = await getQueue(player.playerId);
+      if (queue != null && queue.currentItem != null) {
+        final track = queue.currentItem!.track;
+        _playerTrackCache[player.playerId] = track;
+
+        // Preload the artwork into Flutter's image cache
+        final artworkUrl = getImageUrl(track, size: 512);
+        if (artworkUrl != null) {
+          // Trigger image precache (fire and forget)
+          _precacheImage(artworkUrl);
+        }
+      } else {
+        _playerTrackCache[player.playerId] = null;
+      }
+    } catch (e) {
+      _logger.log('Error preloading player track for ${player.name}: $e');
+    }
+  }
+
+  /// Precache an image URL
+  void _precacheImage(String url) {
+    // Use a microtask to avoid blocking
+    Future.microtask(() {
+      try {
+        // This triggers the image to be downloaded and cached
+        NetworkImage(url).resolve(const ImageConfiguration());
+      } catch (e) {
+        // Ignore errors - this is just a cache warm-up
+      }
+    });
+  }
+
+  /// Preload track info for all available players (for device selector popup)
+  Future<void> preloadAllPlayerTracks() async {
+    if (_api == null) return;
+
+    final players = _availablePlayers.where((p) => p.available).toList();
+
+    // Fetch all player queues in parallel
+    await Future.wait(
+      players.map((player) => _preloadPlayerTrack(player)),
+    );
   }
 
   /// Start polling for selected player's current state

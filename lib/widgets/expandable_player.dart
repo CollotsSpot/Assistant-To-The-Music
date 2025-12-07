@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/timings.dart';
@@ -268,6 +269,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
     // If current player not found in list, start from beginning
     if (currentIndex == -1) {
+      HapticFeedback.mediumImpact();
       maProvider.selectPlayer(players[0]);
       return;
     }
@@ -278,6 +280,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     } else {
       nextIndex = currentIndex >= players.length - 1 ? 0 : currentIndex + 1;
     }
+
+    // Haptic feedback on device switch
+    HapticFeedback.mediumImpact();
     maProvider.selectPlayer(players[nextIndex]);
   }
 

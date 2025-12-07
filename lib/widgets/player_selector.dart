@@ -98,10 +98,15 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
   @override
   void initState() {
     super.initState();
+    // Preload all player track info for display
+    context.read<MusicAssistantProvider>().preloadAllPlayerTracks();
+
     // Auto-refresh at configured polling interval
     _refreshTimer = Timer.periodic(Timings.playerPollingInterval, (_) {
       if (mounted) {
-        context.read<MusicAssistantProvider>().refreshPlayers();
+        final provider = context.read<MusicAssistantProvider>();
+        provider.refreshPlayers();
+        provider.preloadAllPlayerTracks();
       }
     });
   }
@@ -191,11 +196,16 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
                               final isPlaying = player.state == 'playing';
                               final isPaused = player.state == 'paused';
 
-                              // Get album art for selected player if playing
+                              // Get track info - use current track for selected player, cache for others
+                              final playerTrack = isSelected
+                                  ? currentTrack
+                                  : maProvider.getCachedTrackForPlayer(player.playerId);
+
+                              // Get album art for any playing/paused player
                               String? albumArtUrl;
-                              if (isSelected && currentTrack != null && isOn) {
+                              if (playerTrack != null && isOn && (isPlaying || isPaused)) {
                                 albumArtUrl = maProvider.getImageUrl(
-                                  currentTrack.album ?? currentTrack,
+                                  playerTrack.album ?? playerTrack,
                                   size: 128,
                                 );
                               }
@@ -285,21 +295,23 @@ class _PlayerSelectorSheetState extends State<_PlayerSelectorSheet> {
                                                     ),
                                                   ),
                                                   const SizedBox(width: 6),
-                                                  Text(
-                                                    !player.available
-                                                        ? 'Unavailable'
-                                                        : !isOn
-                                                            ? 'Off'
-                                                            : isPlaying
-                                                                ? 'Playing'
-                                                                : isPaused
-                                                                    ? 'Paused'
-                                                                    : 'Idle',
-                                                    style: TextStyle(
-                                                      color: player.available
-                                                          ? colorScheme.onSurfaceVariant
-                                                          : colorScheme.onSurface.withOpacity(0.24),
-                                                      fontSize: 13,
+                                                  Expanded(
+                                                    child: Text(
+                                                      !player.available
+                                                          ? 'Unavailable'
+                                                          : !isOn
+                                                              ? 'Off'
+                                                              : (isPlaying || isPaused) && playerTrack != null
+                                                                  ? playerTrack.name
+                                                                  : 'Idle',
+                                                      style: TextStyle(
+                                                        color: player.available
+                                                            ? colorScheme.onSurfaceVariant
+                                                            : colorScheme.onSurface.withOpacity(0.24),
+                                                        fontSize: 13,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                   if (isSelected) ...[
