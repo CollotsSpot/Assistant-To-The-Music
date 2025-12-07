@@ -252,12 +252,26 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
   bool get isQueuePanelOpen => _queuePanelController.value > 0.5;
 
+  /// Get available players sorted alphabetically (consistent with device selector)
+  List<dynamic> _getAvailablePlayersSorted(MusicAssistantProvider maProvider) {
+    // Use the provider's already-sorted list, filter for available only
+    return maProvider.availablePlayers.where((p) => p.available).toList();
+  }
+
   /// Cycle to the next available player (for swipe gesture)
   void _cycleToNextPlayer(MusicAssistantProvider maProvider, {bool reverse = false}) {
-    final players = maProvider.availablePlayers.where((p) => p.available).toList();
+    final players = _getAvailablePlayersSorted(maProvider);
     if (players.length <= 1) return;
 
-    final currentIndex = players.indexWhere((p) => p.playerId == maProvider.selectedPlayer?.playerId);
+    final selectedPlayerId = maProvider.selectedPlayer?.playerId;
+    final currentIndex = players.indexWhere((p) => p.playerId == selectedPlayerId);
+
+    // If current player not found in list, start from beginning
+    if (currentIndex == -1) {
+      maProvider.selectPlayer(players[0]);
+      return;
+    }
+
     int nextIndex;
     if (reverse) {
       nextIndex = currentIndex <= 0 ? players.length - 1 : currentIndex - 1;
@@ -343,8 +357,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     final slideDownAmount = widget.slideOffset * (_collapsedHeight + bottomOffset + 20);
     final adjustedBottomOffset = bottomOffset - slideDownAmount;
 
-    final availablePlayers = maProvider.availablePlayers.where((p) => p.available).toList();
+    final availablePlayers = _getAvailablePlayersSorted(maProvider);
     final hasMultiplePlayers = availablePlayers.length > 1;
+    final selectedPlayerId = selectedPlayer.playerId;
 
     return Positioned(
       left: _collapsedMargin,
@@ -417,7 +432,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                       children: List.generate(
                         availablePlayers.length.clamp(0, 5), // Max 5 dots
                         (index) {
-                          final isSelected = availablePlayers[index].playerId == selectedPlayer.playerId;
+                          final isSelected = availablePlayers[index].playerId == selectedPlayerId;
                           return Container(
                             margin: const EdgeInsets.symmetric(horizontal: 2),
                             width: isSelected ? 8 : 6,
@@ -613,8 +628,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     final queueT = _queuePanelAnimation.value;
 
     // Check if we have multiple players for swipe gesture
-    final availablePlayers = maProvider.availablePlayers.where((p) => p.available).toList();
+    final availablePlayers = _getAvailablePlayersSorted(maProvider);
     final hasMultiplePlayers = availablePlayers.length > 1;
+    final selectedPlayerId = selectedPlayer.playerId;
 
     return Positioned(
       left: horizontalMargin,
@@ -996,7 +1012,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                         children: List.generate(
                           availablePlayers.length.clamp(0, 5),
                           (index) {
-                            final isSelected = availablePlayers[index].playerId == selectedPlayer.playerId;
+                            final isSelected = availablePlayers[index].playerId == selectedPlayerId;
                             return Container(
                               margin: const EdgeInsets.symmetric(horizontal: 1.5),
                               width: isSelected ? 6 : 4,

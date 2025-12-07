@@ -782,6 +782,9 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                       child: Text('No players available'),
                     )
                   : ListView.builder(
+                      padding: EdgeInsets.only(
+                        bottom: MediaQuery.of(context).padding.bottom + 16,
+                      ),
                       itemCount: players.length,
                       itemBuilder: (context, index) {
                         final player = players[index];
@@ -799,7 +802,6 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                       },
                     ),
             ),
-            const SizedBox(height: 16),
           ],
         ),
       ),
