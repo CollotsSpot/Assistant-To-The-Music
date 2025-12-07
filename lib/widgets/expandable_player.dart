@@ -424,28 +424,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                       ],
                     ),
                   ),
-                  // Player indicator dots (if multiple players)
-                  if (hasMultiplePlayers) ...[
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(
-                        availablePlayers.length.clamp(0, 5), // Max 5 dots
-                        (index) {
-                          final isSelected = availablePlayers[index].playerId == selectedPlayerId;
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 2),
-                            width: isSelected ? 8 : 6,
-                            height: isSelected ? 8 : 6,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: textColor.withOpacity(isSelected ? 1.0 : 0.3),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -994,35 +972,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // Device indicator dots (collapsed only, when multiple players)
-                // Positioned below controls on the right side
-                if (t < 0.3 && hasMultiplePlayers)
-                  Positioned(
-                    bottom: 4,
-                    right: 12,
-                    child: Opacity(
-                      opacity: (1 - t * 3).clamp(0.0, 1.0),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: List.generate(
-                          availablePlayers.length.clamp(0, 5),
-                          (index) {
-                            final isSelected = availablePlayers[index].playerId == selectedPlayerId;
-                            return Container(
-                              margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                              width: isSelected ? 6 : 4,
-                              height: isSelected ? 6 : 4,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: textColor.withOpacity(isSelected ? 0.8 : 0.25),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),

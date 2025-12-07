@@ -756,7 +756,8 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
     GlobalPlayerOverlay.hidePlayer();
 
     final screenHeight = MediaQuery.of(context).size.height;
-    final sheetHeight = screenHeight * 0.45; // Fixed 45% height for play-on sheets
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final sheetHeight = (screenHeight * 0.45) + bottomPadding; // Fixed 45% + safe area
 
     showModalBottomSheet(
       context: context,
@@ -782,9 +783,7 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
                       child: Text('No players available'),
                     )
                   : ListView.builder(
-                      padding: EdgeInsets.only(
-                        bottom: MediaQuery.of(context).padding.bottom + 16,
-                      ),
+                      padding: EdgeInsets.only(bottom: bottomPadding + 16),
                       itemCount: players.length,
                       itemBuilder: (context, index) {
                         final player = players[index];
