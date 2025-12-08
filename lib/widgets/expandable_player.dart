@@ -884,7 +884,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                                   trackShape: const RoundedRectSliderTrackShape(),
                                 ),
                                 child: Slider(
-                                  value: currentProgress.clamp(0, currentTrack.duration!.inSeconds.toDouble()),
+                                  value: currentProgress.clamp(0.0, currentTrack.duration!.inSeconds.toDouble()),
                                   max: currentTrack.duration!.inSeconds.toDouble(),
                                   onChanged: (value) => setState(() => _seekPosition = value),
                                   onChangeStart: (value) => setState(() => _seekPosition = value),
