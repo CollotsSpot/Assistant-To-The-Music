@@ -442,10 +442,30 @@ class _LibraryScreenState extends State<LibraryScreen>
               style: TextStyle(color: colorScheme.onSurface.withOpacity(0.54), fontSize: 12),
             )
           : null,
-      onTap: () {
-        // TODO: Play track
-      },
+      onTap: () => _playTrack(track, provider),
     );
+  }
+
+  Future<void> _playTrack(Track track, MusicAssistantProvider provider) async {
+    if (provider.selectedPlayer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No player selected')),
+      );
+      return;
+    }
+
+    try {
+      await provider.playTrack(
+        provider.selectedPlayer!.playerId,
+        track,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to play track: $e')),
+        );
+      }
+    }
   }
 
   String _formatDuration(Duration duration) {

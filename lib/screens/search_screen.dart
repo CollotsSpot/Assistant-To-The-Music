@@ -135,7 +135,6 @@ class SearchScreenState extends State<SearchScreen> {
                 : null,
           ),
           onChanged: (value) {
-            setState(() {});
             _onSearchChanged(value);
           },
           onSubmitted: _performSearch,

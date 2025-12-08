@@ -53,6 +53,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   // Progress timer for elapsed time updates
   Timer? _progressTimer;
   double? _seekPosition;
+  final ValueNotifier<int> _progressNotifier = ValueNotifier<int>(0);
 
   // Dimensions
   static const double _collapsedHeight = 64.0;
@@ -148,6 +149,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     _slideController.dispose();
     _progressTimer?.cancel();
     _queueRefreshTimer?.cancel();
+    _progressNotifier.dispose();
     super.dispose();
   }
 
@@ -179,9 +181,14 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   void _startProgressTimer() {
     _progressTimer?.cancel();
     // Use local player report interval for progress updates (1 second)
+    // Update only the progress notifier to avoid rebuilding the entire widget tree
     _progressTimer = Timer.periodic(Timings.localPlayerReportInterval, (_) {
       if (mounted && isExpanded) {
-        setState(() {});
+        final maProvider = context.read<MusicAssistantProvider>();
+        final selectedPlayer = maProvider.selectedPlayer;
+        if (selectedPlayer != null) {
+          _progressNotifier.value = selectedPlayer.currentElapsedTime.toInt();
+        }
       }
     });
   }
@@ -863,66 +870,71 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                     top: expandedProgressTop,
                     child: Opacity(
                       opacity: expandedElementsOpacity,
-                      child: Column(
-                        children: [
-                          SliderTheme(
-                            data: SliderThemeData(
-                              trackHeight: 4,
-                              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
-                              overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
-                              trackShape: const RoundedRectSliderTrackShape(),
-                            ),
-                            child: Slider(
-                              value: (_seekPosition ?? selectedPlayer.currentElapsedTime)
-                                  .clamp(0, currentTrack.duration!.inSeconds.toDouble()),
-                              max: currentTrack.duration!.inSeconds.toDouble(),
-                              onChanged: (value) => setState(() => _seekPosition = value),
-                              onChangeStart: (value) => setState(() => _seekPosition = value),
-                              onChangeEnd: (value) async {
-                                try {
-                                  await maProvider.seek(selectedPlayer.playerId, value.round());
-                                  await Future.delayed(const Duration(milliseconds: 200));
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error seeking: $e')),
-                                    );
-                                  }
-                                } finally {
-                                  if (mounted) setState(() => _seekPosition = null);
-                                }
-                              },
-                              activeColor: primaryColor,
-                              inactiveColor: primaryColor.withOpacity(0.2),
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  _formatDuration((_seekPosition ?? selectedPlayer.currentElapsedTime).toInt()),
-                                  style: TextStyle(
-                                    color: textColor.withOpacity(0.5),
-                                    fontSize: 13, // Increased from 11 to 13
-                                    fontWeight: FontWeight.w500,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
-                                  ),
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: _progressNotifier,
+                        builder: (context, elapsedTime, child) {
+                          final currentProgress = _seekPosition ?? elapsedTime.toDouble();
+                          return Column(
+                            children: [
+                              SliderTheme(
+                                data: SliderThemeData(
+                                  trackHeight: 4,
+                                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+                                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+                                  trackShape: const RoundedRectSliderTrackShape(),
                                 ),
-                                Text(
-                                  _formatDuration(currentTrack.duration!.inSeconds),
-                                  style: TextStyle(
-                                    color: textColor.withOpacity(0.5),
-                                    fontSize: 13, // Increased from 11 to 13
-                                    fontWeight: FontWeight.w500,
-                                    fontFeatures: const [FontFeature.tabularFigures()],
-                                  ),
+                                child: Slider(
+                                  value: currentProgress.clamp(0, currentTrack.duration!.inSeconds.toDouble()),
+                                  max: currentTrack.duration!.inSeconds.toDouble(),
+                                  onChanged: (value) => setState(() => _seekPosition = value),
+                                  onChangeStart: (value) => setState(() => _seekPosition = value),
+                                  onChangeEnd: (value) async {
+                                    try {
+                                      await maProvider.seek(selectedPlayer.playerId, value.round());
+                                      await Future.delayed(const Duration(milliseconds: 200));
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Error seeking: $e')),
+                                        );
+                                      }
+                                    } finally {
+                                      if (mounted) setState(() => _seekPosition = null);
+                                    }
+                                  },
+                                  activeColor: primaryColor,
+                                  inactiveColor: primaryColor.withOpacity(0.2),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ],
+                              ),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _formatDuration(currentProgress.toInt()),
+                                      style: TextStyle(
+                                        color: textColor.withOpacity(0.5),
+                                        fontSize: 13, // Increased from 11 to 13
+                                        fontWeight: FontWeight.w500,
+                                        fontFeatures: const [FontFeature.tabularFigures()],
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatDuration(currentTrack.duration!.inSeconds),
+                                      style: TextStyle(
+                                        color: textColor.withOpacity(0.5),
+                                        fontSize: 13, // Increased from 11 to 13
+                                        fontWeight: FontWeight.w500,
+                                        fontFeatures: const [FontFeature.tabularFigures()],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ),
@@ -1233,6 +1245,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                   : null,
               onTap: () {
                 // TODO: Jump to this track in queue
+                // Music Assistant API doesn't currently expose a skip_to_index or play_queue_item endpoint
+                // Would need to add API method like skipToQueueIndex(queueId, index) if MA supports it
+                // Alternative: Could use multiple next() calls but that's inefficient and unreliable
               },
             ),
           ),

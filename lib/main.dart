@@ -8,6 +8,7 @@ import 'screens/login_screen.dart';
 import 'services/settings_service.dart';
 import 'services/audio/massiv_audio_handler.dart';
 import 'services/auth/auth_manager.dart';
+import 'services/debug_logger.dart';
 import 'theme/theme_provider.dart';
 import 'theme/app_theme.dart';
 import 'theme/system_theme_helper.dart';
@@ -15,6 +16,9 @@ import 'widgets/global_player_overlay.dart';
 
 // Global audio handler instance
 late MassivAudioHandler audioHandler;
+
+// Global debug logger instance
+final _logger = DebugLogger();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +38,7 @@ Future<void> main() async {
       androidStopForegroundOnPause: false,  // Keep service alive when paused for background playback
     ),
   );
-  print('🎵 AudioService initialized - background playback and media notifications ENABLED');
+  _logger.log('🎵 AudioService initialized - background playback and media notifications ENABLED');
 
   // Set preferred orientations
   SystemChrome.setPreferredOrientations([
@@ -86,12 +90,12 @@ class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindi
 
     if (state == AppLifecycleState.resumed) {
       // App came back to foreground - check connection and reconnect if needed
-      print('📱 App resumed - checking WebSocket connection...');
+      _logger.log('📱 App resumed - checking WebSocket connection...');
       _musicProvider.checkAndReconnect();
     } else if (state == AppLifecycleState.paused) {
-      print('📱 App paused (backgrounded)');
+      _logger.log('📱 App paused (backgrounded)');
     } else if (state == AppLifecycleState.detached) {
-      print('📱 App detached (being destroyed)');
+      _logger.log('📱 App detached (being destroyed)');
     }
   }
 
@@ -198,24 +202,24 @@ class _AppStartupState extends State<AppStartup> {
 
       // Only attempt connection if not already connected
       if (!provider.isConnected) {
-        print('🚀 AppStartup: Auto-connecting to saved server: $serverUrl');
+        _logger.log('🚀 AppStartup: Auto-connecting to saved server: $serverUrl');
         try {
           // Restore auth credentials before connecting (critical for Authelia)
           final savedCredentials = await SettingsService.getAuthCredentials();
           if (savedCredentials != null) {
-            print('🚀 AppStartup: Restoring saved auth credentials');
+            _logger.log('🚀 AppStartup: Restoring saved auth credentials');
             provider.authManager.deserializeCredentials(savedCredentials);
           }
 
           await provider.connectToServer(serverUrl);
-          print('🚀 AppStartup: Auto-connection successful');
+          _logger.log('🚀 AppStartup: Auto-connection successful');
         } catch (e) {
-          print('🚀 AppStartup: Auto-connection failed: $e');
+          _logger.log('🚀 AppStartup: Auto-connection failed: $e');
           // Connection failed, but still show home screen
           // User can manually reconnect from there
         }
       } else {
-        print('🚀 AppStartup: Already connected');
+        _logger.log('🚀 AppStartup: Already connected');
       }
 
       if (mounted) {

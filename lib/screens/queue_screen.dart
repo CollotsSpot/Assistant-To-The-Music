@@ -231,6 +231,9 @@ class _QueueScreenState extends State<QueueScreen> {
       ),
       onDismissed: (direction) {
         // TODO: Implement queue item removal via API
+        // Currently only removes locally from UI state, not from actual Music Assistant queue
+        // Need to investigate if Music Assistant API supports player_queues/remove_item or similar endpoint
+        // Requires: API method like removeQueueItem(queueId, queueItemId) that calls player_queues/remove_item
         setState(() {
           _queue!.items.removeAt(index);
         });
