@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
 import '../utils/page_transitions.dart';
+import '../widgets/common/empty_state.dart';
 import 'artist_details_screen.dart';
 
 class LibraryArtistsScreen extends StatelessWidget {
@@ -54,37 +55,8 @@ class LibraryArtistsScreen extends StatelessWidget {
     }
 
     if (artists.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.person_outline_rounded,
-              size: 64,
-              color: colorScheme.onSurface.withOpacity(0.54),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No artists found',
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.7),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                context.read<MusicAssistantProvider>().loadLibrary();
-              },
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Refresh'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.surfaceVariant,
-                foregroundColor: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
+      return EmptyState.artists(
+        onRefresh: () => context.read<MusicAssistantProvider>().loadLibrary(),
       );
     }
 

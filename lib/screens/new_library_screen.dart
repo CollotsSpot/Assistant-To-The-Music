@@ -9,6 +9,7 @@ import '../widgets/album_card.dart';
 import '../utils/page_transitions.dart';
 import '../constants/hero_tags.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/common/empty_state.dart';
 import 'artist_details_screen.dart';
 import 'playlist_details_screen.dart';
 import 'settings_screen.dart';
@@ -214,10 +215,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
         }
 
         if (artists.isEmpty) {
-          return _buildEmptyState(
-            context,
-            icon: Icons.person_outline_rounded,
-            message: 'No artists found',
+          return EmptyState.artists(
             onRefresh: () => context.read<MusicAssistantProvider>().loadLibrary(),
           );
         }
@@ -316,10 +314,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
         }
 
         if (albums.isEmpty) {
-          return _buildEmptyState(
-            context,
-            icon: Icons.album_outlined,
-            message: 'No albums found',
+          return EmptyState.albums(
             onRefresh: () => context.read<MusicAssistantProvider>().loadLibrary(),
           );
         }
@@ -362,12 +357,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     }
 
     if (_playlists.isEmpty) {
-      return _buildEmptyState(
-        context,
-        icon: Icons.playlist_play_outlined,
-        message: 'No playlists found',
-        onRefresh: _loadPlaylists,
-      );
+      return EmptyState.playlists(onRefresh: _loadPlaylists);
     }
 
     return RefreshIndicator(
@@ -443,37 +433,4 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     );
   }
 
-  // ============ SHARED WIDGETS ============
-  Widget _buildEmptyState(
-    BuildContext context, {
-    required IconData icon,
-    required String message,
-    required VoidCallback onRefresh,
-  }) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: colorScheme.onSurface.withOpacity(0.54)),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: TextStyle(color: colorScheme.onSurface.withOpacity(0.7), fontSize: 16),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: onRefresh,
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Refresh'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colorScheme.surfaceVariant,
-              foregroundColor: colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

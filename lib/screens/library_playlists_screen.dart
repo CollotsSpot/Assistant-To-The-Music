@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
+import '../widgets/common/empty_state.dart';
 import 'playlist_details_screen.dart';
 
 class LibraryPlaylistsScreen extends StatefulWidget {
@@ -80,36 +81,7 @@ class _LibraryPlaylistsScreenState extends State<LibraryPlaylistsScreen> {
     }
 
     if (_playlists.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.playlist_play_outlined,
-              size: 64,
-              color: colorScheme.onSurface.withOpacity(0.54),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No playlists found',
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.7),
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadPlaylists,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Refresh'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.surfaceVariant,
-                foregroundColor: colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      );
+      return EmptyState.playlists(onRefresh: _loadPlaylists);
     }
 
     return RefreshIndicator(

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/music_assistant_provider.dart';
 import '../../models/player.dart';
+import '../common/empty_state.dart';
 
 /// Panel that displays the current playback queue
 class QueuePanel extends StatelessWidget {
@@ -77,19 +78,7 @@ class QueuePanel extends StatelessWidget {
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.queue_music, size: 64, color: textColor.withOpacity(0.3)),
-          const SizedBox(height: 16),
-          Text(
-            'Queue is empty',
-            style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 16),
-          ),
-        ],
-      ),
-    );
+    return EmptyState.queue();
   }
 
   Widget _buildQueueList() {

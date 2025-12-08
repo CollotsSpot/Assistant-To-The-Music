@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/player.dart';
 import '../services/debug_logger.dart';
+import '../widgets/common/empty_state.dart';
 
 class QueueScreen extends StatefulWidget {
   const QueueScreen({super.key});
@@ -139,19 +140,7 @@ class _QueueScreenState extends State<QueueScreen> {
     }
 
     if (_queue == null || _queue!.items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.queue_music, size: 64, color: Colors.grey[700]),
-            const SizedBox(height: 16),
-            Text(
-              'Queue is empty',
-              style: TextStyle(color: Colors.grey[600], fontSize: 18),
-            ),
-          ],
-        ),
-      );
+      return EmptyState.queue();
     }
 
     // Filter to show only current and upcoming items (not history)
@@ -159,18 +148,9 @@ class _QueueScreenState extends State<QueueScreen> {
     final upcomingItems = _queue!.items.sublist(currentIndex);
 
     if (upcomingItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.queue_music, size: 64, color: Colors.grey[700]),
-            const SizedBox(height: 16),
-            Text(
-              'No upcoming tracks',
-              style: TextStyle(color: Colors.grey[600], fontSize: 18),
-            ),
-          ],
-        ),
+      return const EmptyState(
+        icon: Icons.queue_music,
+        message: 'No upcoming tracks',
       );
     }
 

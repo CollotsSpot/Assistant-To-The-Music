@@ -7,6 +7,7 @@ import '../providers/music_assistant_provider.dart';
 import '../models/media_item.dart';
 import '../services/debug_logger.dart';
 import '../widgets/global_player_overlay.dart';
+import '../widgets/common/empty_state.dart';
 import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
@@ -277,26 +278,7 @@ class SearchScreenState extends State<SearchScreen> {
     final hasResults = artists.isNotEmpty || albums.isNotEmpty || tracks.isNotEmpty;
 
     if (!hasResults) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off_rounded,
-              size: 64,
-              color: colorScheme.onBackground.withOpacity(0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No results found',
-              style: TextStyle(
-                color: colorScheme.onBackground.withOpacity(0.5),
-                fontSize: 16,
-              ),
-            ),
-          ],
-        ),
-      );
+      return EmptyState.search();
     }
 
     return Column(
