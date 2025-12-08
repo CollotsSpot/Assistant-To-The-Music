@@ -102,10 +102,20 @@ and DisconnectedState (3 usages, ~140 lines removed). Total ~367 lines of duplic
 ## Phase 7: Design System (2 days)
 *Centralize hardcoded values*
 
-- [ ] Create `lib/theme/design_tokens.dart`:
-  - [ ] Spacing constants (205 instances)
-  - [ ] Color constants (~10 hardcoded)
-  - [ ] Dimension constants
+- [x] Create `lib/theme/design_tokens.dart`:
+  - [x] Spacing constants (Spacing class with xxs-xxxl scale)
+  - [x] Border radius constants (Radii class)
+  - [x] Icon size constants (IconSizes class)
+  - [x] Dimension constants (Dimensions class)
+  - [x] Animation duration constants (Durations class)
+- [x] Apply tokens to extracted widgets:
+  - [x] `empty_state.dart` - Spacing tokens
+  - [x] `disconnected_state.dart` - Spacing, IconSizes, Radii tokens
+  - [x] `queue_panel.dart` - Spacing, Radii, IconSizes tokens
+  - [x] `player_controls.dart` - Spacing tokens
+  - [x] `device_selector_bar.dart` - Spacing, IconSizes tokens
+  - [x] `debug_console.dart` - Spacing, Radii, IconSizes tokens
+- [ ] Continue replacing remaining hardcoded values (~223 remaining)
 - [ ] Create `lib/constants/strings.dart` (40+ strings)
 
 ---
@@ -132,7 +142,7 @@ and DisconnectedState (3 usages, ~140 lines removed). Total ~367 lines of duplic
 | Phase 4 | **PARTIAL** | 2025-12-08 |
 | Phase 5 | **PARTIAL** | 2025-12-08 |
 | Phase 6 | **PARTIAL** | 2025-12-08 |
-| Phase 7 | Not Started | - |
+| Phase 7 | **PARTIAL** | 2025-12-08 |
 | Phase 8 | Not Started | - |
 
 ---
