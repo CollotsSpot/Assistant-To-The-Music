@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/music_assistant_provider.dart';
 import '../services/settings_service.dart';
 import '../services/auth/auth_strategy.dart';
 import '../services/debug_logger.dart';
+import '../widgets/debug/debug_console.dart';
 import 'home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -767,141 +767,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
 
               // Debug toggle button
-              TextButton.icon(
-                onPressed: () {
-                  setState(() {
-                    _showDebug = !_showDebug;
-                  });
-                },
-                icon: Icon(
-                  _showDebug ? Icons.bug_report : Icons.bug_report_outlined,
-                  size: 16,
-                ),
-                label: Text(
-                  _showDebug ? 'Hide Debug' : 'Show Debug',
-                  style: const TextStyle(fontSize: 12),
-                ),
+              DebugToggleButton(
+                isVisible: _showDebug,
+                onToggle: () => setState(() => _showDebug = !_showDebug),
               ),
 
               // Debug panel
               if (_showDebug) ...[
                 const SizedBox(height: 16),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.withOpacity(0.3)),
-                  ),
-                  constraints: const BoxConstraints(maxHeight: 200),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.terminal, color: Colors.green, size: 16),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Debug Console',
-                            style: TextStyle(
-                              color: Colors.green,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton.icon(
-                            onPressed: () {
-                              final logs = DebugLogger().getAllLogs();
-                              if (logs.isNotEmpty) {
-                                Clipboard.setData(ClipboardData(text: logs));
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Logs copied to clipboard'),
-                                    backgroundColor: Colors.green,
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              } else {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('No logs to copy'),
-                                    duration: Duration(seconds: 2),
-                                  ),
-                                );
-                              }
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(50, 20),
-                            ),
-                            icon: const Icon(Icons.copy, size: 10, color: Colors.green),
-                            label: const Text(
-                              'Copy',
-                              style: TextStyle(fontSize: 10, color: Colors.green),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              DebugLogger().clear();
-                              setState(() {
-                                _debugLogs.clear();
-                              });
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(40, 20),
-                            ),
-                            child: const Text(
-                              'Clear',
-                              style: TextStyle(fontSize: 10, color: Colors.green),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Divider(color: Colors.green, height: 8),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          reverse: true,
-                          child: Builder(
-                            builder: (context) {
-                              // Get all logs from DebugLogger singleton
-                              final allLogs = DebugLogger().logs;
-                              final recentLogs = allLogs.length > 50
-                                  ? allLogs.sublist(allLogs.length - 50)
-                                  : allLogs;
-
-                              return recentLogs.isEmpty
-                                  ? const Text(
-                                      'No debug logs yet. Try detecting auth.',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontSize: 10,
-                                        fontStyle: FontStyle.italic,
-                                      ),
-                                    )
-                                  : Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: recentLogs
-                                          .map((log) => Padding(
-                                                padding: const EdgeInsets.only(bottom: 2),
-                                                child: Text(
-                                                  log,
-                                                  style: const TextStyle(
-                                                    color: Colors.green,
-                                                    fontSize: 10,
-                                                    fontFamily: 'monospace',
-                                                  ),
-                                                ),
-                                              ))
-                                          .toList(),
-                                    );
-                            },
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+                DebugConsole(
+                  onClear: () => setState(() => _debugLogs.clear()),
                 ),
                 const SizedBox(height: 16),
               ],
