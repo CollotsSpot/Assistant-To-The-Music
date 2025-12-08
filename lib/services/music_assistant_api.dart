@@ -1953,9 +1953,9 @@ class MusicAssistantAPI {
     }
 
     try {
-      // Send a lightweight ping command
-      // Music Assistant servers respond to 'ping' with 'pong'
-      await _sendCommand('ping').timeout(
+      // Send a lightweight command to check connection is alive
+      // Using 'info' as it's a valid MA command
+      await _sendCommand('info').timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           _logger.log('Heartbeat timeout - connection may be stale');
