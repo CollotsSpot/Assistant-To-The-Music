@@ -10,6 +10,7 @@ import '../utils/page_transitions.dart';
 import '../constants/hero_tags.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/common/empty_state.dart';
+import '../widgets/common/disconnected_state.dart';
 import 'artist_details_screen.dart';
 import 'playlist_details_screen.dart';
 import 'settings_screen.dart';
@@ -109,7 +110,12 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
               centerTitle: true,
               actions: const [PlayerSelector()],
             ),
-            body: _buildDisconnectedView(context),
+            body: DisconnectedState.withSettingsAction(
+              onSettings: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              ),
+            ),
           );
         }
 
@@ -152,52 +158,6 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildDisconnectedView(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              size: 64,
-              color: colorScheme.onSurface.withOpacity(0.54),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Not connected to Music Assistant',
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.7),
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const SettingsScreen()),
-                );
-              },
-              icon: const Icon(Icons.settings_rounded),
-              label: const Text('Configure Server'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

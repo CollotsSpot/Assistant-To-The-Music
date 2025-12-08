@@ -8,6 +8,7 @@ import '../models/media_item.dart';
 import '../services/debug_logger.dart';
 import '../widgets/global_player_overlay.dart';
 import '../widgets/common/empty_state.dart';
+import '../widgets/common/disconnected_state.dart';
 import 'album_details_screen.dart';
 import 'artist_details_screen.dart';
 
@@ -176,37 +177,8 @@ class SearchScreenState extends State<SearchScreen> {
         ),
       ),
       body: !maProvider.isConnected
-          ? _buildDisconnectedView()
+          ? DisconnectedState.simple()
           : _buildSearchContent(),
-    );
-  }
-
-  Widget _buildDisconnectedView() {
-    final colorScheme = Theme.of(context).colorScheme;
-    
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              size: 64,
-              color: colorScheme.onBackground.withOpacity(0.54),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Not connected to Music Assistant',
-              style: TextStyle(
-                color: colorScheme.onBackground.withOpacity(0.7),
-                fontSize: 16,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 

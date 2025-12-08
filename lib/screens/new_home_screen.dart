@@ -5,6 +5,7 @@ import '../widgets/global_player_overlay.dart';
 import '../widgets/player_selector.dart';
 import '../widgets/album_row.dart';
 import '../widgets/artist_row.dart';
+import '../widgets/common/disconnected_state.dart';
 import 'settings_screen.dart';
 import 'search_screen.dart';
 
@@ -74,7 +75,12 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
           builder: (context, isConnected, child) {
             final maProvider = context.read<MusicAssistantProvider>();
             return !isConnected
-                ? _buildDisconnectedView(context, maProvider)
+                ? DisconnectedState.full(
+                    onSettings: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    ),
+                  )
                 : RefreshIndicator(
                     onRefresh: _onRefresh,
                     color: colorScheme.primary,
@@ -87,68 +93,6 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
     );
   }
 
-  Widget _buildDisconnectedView(
-      BuildContext context, MusicAssistantProvider provider) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.cloud_off_rounded,
-              size: 80,
-              color: colorScheme.onSurface.withOpacity(0.54),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Not Connected',
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 24,
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Connect to your Music Assistant server to start listening',
-              style: TextStyle(
-                color: colorScheme.onSurface.withOpacity(0.7),
-                fontSize: 14,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.settings_rounded),
-              label: const Text('Configure Server'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: colorScheme.primary,
-                foregroundColor: colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildConnectedView(
       BuildContext context, MusicAssistantProvider provider) {
