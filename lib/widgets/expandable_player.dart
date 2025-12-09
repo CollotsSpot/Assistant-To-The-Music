@@ -78,13 +78,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   dynamic _peekPlayer; // The player that would be selected if swipe commits
   String? _peekImageUrl; // Image URL for peek player's current track
 
-  // Temporary cache for smooth transition - holds incoming player's track info
-  // until the provider updates with the new selection
-  dynamic _transitionTrack;
-  String? _transitionImageUrl;
-
   // Flag to indicate we're in the middle of a player switch transition
-  // When true, we show the peek content at center instead of the main content
+  // When true, we hide main content and show peek content at center
   bool _inTransition = false;
 
   @override
@@ -453,15 +448,11 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
       _slideController.removeListener(animateToTarget);
 
-      // Save the peek data as transition cache before switching
-      _transitionTrack = _peekTrack;
-      _transitionImageUrl = _peekImageUrl;
-
-      // Enter transition mode - this keeps showing peek content at center
-      // while hiding the main content that hasn't updated yet
+      // Keep the peek data - it has the correct track info for the incoming player
+      // We'll show this at center while hiding the stale main content
       setState(() {
         _inTransition = true;
-        _slideOffset = 0.0; // Reset slide so peek appears at center
+        _slideOffset = 0.0; // Peek is now at center
         _isSliding = false;
       });
 
@@ -478,8 +469,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
             _peekPlayer = null;
             _peekTrack = null;
             _peekImageUrl = null;
-            _transitionTrack = null;
-            _transitionImageUrl = null;
           });
         });
       });
@@ -1285,80 +1274,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     required Color textColor,
     required ColorScheme colorScheme,
   }) {
-    // During transition, show at center with cached data
-    if (_inTransition) {
-      final transitionTrackName = _transitionTrack?.name ?? 'No track';
-      final transitionArtistName = _transitionTrack?.artistsString ?? '';
-      final transitionImage = _transitionImageUrl;
-
-      return Stack(
-        children: [
-          // Transition album art at center
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: artSize,
-              height: artSize,
-              decoration: BoxDecoration(
-                color: colorScheme.surfaceContainerHighest,
-              ),
-              child: transitionImage != null
-                  ? CachedNetworkImage(
-                      imageUrl: transitionImage,
-                      fit: BoxFit.cover,
-                      memCacheWidth: 256,
-                      memCacheHeight: 256,
-                      fadeInDuration: Duration.zero,
-                      fadeOutDuration: Duration.zero,
-                      placeholderFadeInDuration: Duration.zero,
-                      placeholder: (_, __) => _buildMiniPlaceholderArt(colorScheme),
-                      errorWidget: (_, __, ___) => _buildMiniPlaceholderArt(colorScheme),
-                    )
-                  : _buildMiniPlaceholderArt(colorScheme),
-            ),
-          ),
-          // Transition track title
-          Positioned(
-            left: titleLeft,
-            top: titleTop,
-            child: SizedBox(
-              width: titleWidth,
-              child: Text(
-                transitionTrackName,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.w500,
-                  height: 1.2,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-          // Transition artist name
-          Positioned(
-            left: titleLeft,
-            top: artistTop,
-            child: SizedBox(
-              width: titleWidth,
-              child: Text(
-                transitionArtistName,
-                style: TextStyle(
-                  color: textColor.withOpacity(0.6),
-                  fontSize: artistFontSize,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Normal peek mode - calculate sliding position
+    // Calculate sliding position
+    // During transition, slideOffset is 0 so peek shows at center
     // When sliding left (negative offset), peek comes from right
     // When sliding right (positive offset), peek comes from left
     final isFromRight = slideOffset < 0;
@@ -1374,10 +1291,10 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
         ? containerWidth * (1 - peekProgress)  // Slides in from right
         : -containerWidth * (1 - peekProgress); // Slides in from left
 
-    // Get peek player track info
-    final peekTrack = peekPlayer != null ? maProvider.getCachedTrackForPlayer(peekPlayer.playerId) : null;
-    final peekTrackName = peekTrack?.name ?? 'No track';
-    final peekArtistName = peekTrack?.artistsString ?? (peekPlayer?.name ?? '');
+    // Use cached _peekTrack (set during drag) for track info
+    // This ensures we show correct info during transition when peekPlayer might be stale
+    final peekTrackName = _peekTrack?.name ?? 'No track';
+    final peekArtistName = _peekTrack?.artistsString ?? (peekPlayer?.name ?? '');
 
     return Stack(
       children: [
