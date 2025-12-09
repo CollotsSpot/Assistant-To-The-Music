@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/media_item.dart';
 import '../models/player.dart';
 import '../services/music_assistant_api.dart';
@@ -1092,7 +1094,8 @@ class MusicAssistantProvider with ChangeNotifier {
         selectPlayer(playerToSelect);
       }
 
-      _preloadAdjacentPlayers(preloadAll: true);
+      // Await preload so track data and images are ready for swipe gestures
+      await _preloadAdjacentPlayers(preloadAll: true);
     } catch (e) {
       ErrorHandler.logError('Load and select players', e);
     }
@@ -1147,9 +1150,10 @@ class MusicAssistantProvider with ChangeNotifier {
     if (prevIndex != currentIndex) playersToPreload.add(players[prevIndex]);
     if (nextIndex != currentIndex) playersToPreload.add(players[nextIndex]);
 
-    for (final player in playersToPreload) {
-      _preloadPlayerTrack(player);
-    }
+    // Await all preloads so images are ready for next swipe
+    await Future.wait(
+      playersToPreload.map((player) => _preloadPlayerTrack(player)),
+    );
   }
 
   Future<void> _preloadPlayerTrack(Player player) async {
@@ -1179,6 +1183,12 @@ class MusicAssistantProvider with ChangeNotifier {
         } else {
           _cacheService.setCachedTrackForPlayer(player.playerId, track);
           _logger.log('🔍 Preload ${player.name}: CACHED track "${track.name}"');
+
+          // Also precache the image so it's ready for swipe preview
+          final imageUrl = getImageUrl(track, size: 512);
+          if (imageUrl != null) {
+            _precacheImage(imageUrl);
+          }
         }
       } else {
         _logger.log('🔍 Preload ${player.name}: NO TRACK - queue empty');
@@ -1189,6 +1199,34 @@ class MusicAssistantProvider with ChangeNotifier {
       }
     } catch (e) {
       _logger.log('Error preloading player track for ${player.name}: $e');
+    }
+  }
+
+  /// Precache an image URL so it loads instantly when displayed
+  Future<void> _precacheImage(String url) async {
+    try {
+      final imageProvider = CachedNetworkImageProvider(url);
+      final imageStream = imageProvider.resolve(const ImageConfiguration());
+      final completer = Completer<void>();
+      late ImageStreamListener listener;
+
+      listener = ImageStreamListener(
+        (ImageInfo info, bool synchronousCall) {
+          if (!completer.isCompleted) completer.complete();
+          imageStream.removeListener(listener);
+        },
+        onError: (exception, stackTrace) {
+          if (!completer.isCompleted) completer.completeError(exception);
+          imageStream.removeListener(listener);
+        },
+      );
+
+      imageStream.addListener(listener);
+      await completer.future.timeout(const Duration(seconds: 5), onTimeout: () {
+        imageStream.removeListener(listener);
+      });
+    } catch (e) {
+      // Silently ignore precache errors - image will load on demand
     }
   }
 

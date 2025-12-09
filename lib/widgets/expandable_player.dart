@@ -7,7 +7,6 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../constants/timings.dart';
 import '../providers/music_assistant_provider.dart';
 import '../models/player.dart';
-import '../services/debug_logger.dart';
 import '../theme/palette_helper.dart';
 import '../theme/theme_provider.dart';
 import 'animated_icon_button.dart';
@@ -35,8 +34,6 @@ class ExpandablePlayer extends StatefulWidget {
 
 class ExpandablePlayerState extends State<ExpandablePlayer>
     with TickerProviderStateMixin {
-  final DebugLogger _logger = DebugLogger();
-
   late AnimationController _controller;
   late Animation<double> _expandAnimation;
 
@@ -315,26 +312,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
   // Cache for peek track data
   dynamic _peekTrack;
 
-  /// Update peek player based on current drag direction
-  void _updatePeekPlayer(MusicAssistantProvider maProvider, double dragDirection) {
-    // dragDirection < 0 means swiping left (next player)
-    // dragDirection > 0 means swiping right (previous player)
-    final isNext = dragDirection < 0;
-    final newPeekPlayer = _getAdjacentPlayer(maProvider, next: isNext);
-
-    if (newPeekPlayer?.playerId != _peekPlayer?.playerId) {
-      _peekPlayer = newPeekPlayer;
-      // Get the peek player's current track image if available
-      if (_peekPlayer != null) {
-        _peekTrack = maProvider.getCachedTrackForPlayer(_peekPlayer.playerId);
-        _peekImageUrl = _peekTrack != null ? maProvider.getImageUrl(_peekTrack, size: 512) : null;
-      } else {
-        _peekTrack = null;
-        _peekImageUrl = null;
-      }
-    }
-  }
-
   /// Cycle to the next available player (for swipe gesture)
   void _cycleToNextPlayer(MusicAssistantProvider maProvider, {bool reverse = false}) {
     final players = _getAvailablePlayersSorted(maProvider);
@@ -375,6 +352,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
       _isDragging = true;
       _peekPlayer = null;
       _peekImageUrl = null;
+      _peekTrack = null;
     }
 
     // Calculate normalized offset (-1 to 1 range)
@@ -382,14 +360,34 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     // Positive = dragging right (showing previous player from left)
     final delta = details.primaryDelta ?? 0;
     final normalizedDelta = delta / containerWidth;
+    final newSlideOffset = (_slideOffset + normalizedDelta).clamp(-1.0, 1.0);
 
+    // Update peek player based on drag direction (must be inside setState to trigger rebuild)
     setState(() {
-      _slideOffset = (_slideOffset + normalizedDelta).clamp(-1.0, 1.0);
+      _slideOffset = newSlideOffset;
+      if (_slideOffset != 0) {
+        _updatePeekPlayerState(maProvider, _slideOffset);
+      }
     });
+  }
 
-    // Update peek player based on drag direction
-    if (_slideOffset != 0) {
-      _updatePeekPlayer(maProvider, _slideOffset);
+  /// Update peek player state variables (called inside setState)
+  void _updatePeekPlayerState(MusicAssistantProvider maProvider, double dragDirection) {
+    // dragDirection < 0 means swiping left (next player)
+    // dragDirection > 0 means swiping right (previous player)
+    final isNext = dragDirection < 0;
+    final newPeekPlayer = _getAdjacentPlayer(maProvider, next: isNext);
+
+    if (newPeekPlayer?.playerId != _peekPlayer?.playerId) {
+      _peekPlayer = newPeekPlayer;
+      // Get the peek player's current track image if available
+      if (_peekPlayer != null) {
+        _peekTrack = maProvider.getCachedTrackForPlayer(_peekPlayer.playerId);
+        _peekImageUrl = _peekTrack != null ? maProvider.getImageUrl(_peekTrack, size: 512) : null;
+      } else {
+        _peekTrack = null;
+        _peekImageUrl = null;
+      }
     }
   }
 
@@ -450,8 +448,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
 
       _slideController.removeListener(animateToTarget);
 
-      _logger.log('🎬 COMMIT: Animation complete, slideOffset=$_slideOffset, calling onSwitch');
-
       // Switch the player FIRST - this now immediately sets currentTrack from cache
       // in the provider, so the data is ready before we rebuild
       onSwitch();
@@ -460,11 +456,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
       final maProvider = context.read<MusicAssistantProvider>();
       final newTrack = maProvider.currentTrack;
 
-      _logger.log('🎬 COMMIT: After onSwitch, newTrack=${newTrack?.name ?? "NULL"}');
-
       if (newTrack != null) {
         // Switching to a playing player - clear immediately since we have track data
-        _logger.log('🎬 COMMIT: Has track, clearing state immediately');
         setState(() {
           _slideOffset = 0.0;
           _isSliding = false;
@@ -479,11 +472,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
         // shows peek content (new player name) at center position.
         // After two frames, clear everything - this ensures the DeviceSelectorBar
         // has fully rendered before we remove the peek content.
-        _logger.log('🎬 COMMIT: No track, keeping peek visible for DeviceSelectorBar');
         setState(() {
           _isSliding = false;
-          // Keep _slideOffset at 1.0 so peek shows at center in DeviceSelectorBar
-          // Keep _peekPlayer so DeviceSelectorBar can show it
         });
 
         // Wait two frames to ensure DeviceSelectorBar has rendered, then clean up
@@ -491,7 +481,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
           if (!mounted) return;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!mounted) return;
-            _logger.log('🎬 COMMIT: Clearing all transition state');
             setState(() {
               _slideOffset = 0.0;
               _inTransition = false;
@@ -553,9 +542,6 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
         final selectedPlayer = maProvider.selectedPlayer;
         final currentTrack = maProvider.currentTrack;
 
-        // Debug logging for transition issues
-        _logger.log('🎨 BUILD: player=${selectedPlayer?.name}, track=${currentTrack?.name ?? "NULL"}, slideOffset=$_slideOffset, peekPlayer=${_peekPlayer?.name}');
-
         // Don't show if no player selected
         if (selectedPlayer == null) {
           return const SizedBox.shrink();
@@ -576,10 +562,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
           builder: (context, _) {
             // If no track is playing, show device selector bar
             if (currentTrack == null) {
-              _logger.log('🎨 RENDER: DeviceSelectorBar (no track)');
               return _buildDeviceSelectorBar(context, maProvider, selectedPlayer, themeProvider);
             }
-            _logger.log('🎨 RENDER: MorphingPlayer (has track)');
             return _buildMorphingPlayer(
               context,
               maProvider,
@@ -1326,14 +1310,14 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
         ? containerWidth * (1 - peekProgress)  // Slides in from right
         : -containerWidth * (1 - peekProgress); // Slides in from left
 
-    // Use cached _peekTrack (set during drag) for track info
-    // This ensures we show correct info during transition when peekPlayer might be stale
-    final peekTrackName = _peekTrack?.name ?? 'No track';
-    final peekArtistName = _peekTrack?.artistsString ?? (peekPlayer?.name ?? '');
+    // Check if peek player has a track - if not, show device info instead
+    final hasTrack = _peekTrack != null && peekImageUrl != null;
+    final peekTrackName = hasTrack ? _peekTrack!.name : (peekPlayer?.name ?? 'Unknown');
+    final peekArtistName = hasTrack ? (_peekTrack!.artistsString ?? '') : 'Swipe to switch device';
 
     return Stack(
       children: [
-        // Peek album art
+        // Peek album art / device icon
         Positioned(
           left: peekBaseOffset,
           top: 0,
@@ -1343,9 +1327,9 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
             decoration: BoxDecoration(
               color: colorScheme.surfaceContainerHighest,
             ),
-            child: peekImageUrl != null
+            child: hasTrack
                 ? CachedNetworkImage(
-                    imageUrl: peekImageUrl,
+                    imageUrl: peekImageUrl!,
                     fit: BoxFit.cover,
                     memCacheWidth: 256,
                     memCacheHeight: 256,
@@ -1355,11 +1339,11 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
                     placeholder: (_, __) => _buildMiniPlaceholderArt(colorScheme),
                     errorWidget: (_, __, ___) => _buildMiniPlaceholderArt(colorScheme),
                   )
-                : _buildMiniPlaceholderArt(colorScheme),
+                : _buildDeviceIcon(peekPlayer?.name ?? '', artSize, colorScheme),
           ),
         ),
 
-        // Peek track title
+        // Peek track title / device name
         Positioned(
           left: titleLeft + peekBaseOffset,
           top: titleTop,
@@ -1379,7 +1363,7 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
           ),
         ),
 
-        // Peek artist name
+        // Peek artist name / device hint
         Positioned(
           left: titleLeft + peekBaseOffset,
           top: artistTop,
@@ -1397,6 +1381,34 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
           ),
         ),
       ],
+    );
+  }
+
+  /// Build device icon for non-playing peek player
+  Widget _buildDeviceIcon(String playerName, double size, ColorScheme colorScheme) {
+    final nameLower = playerName.toLowerCase();
+    IconData icon;
+    if (nameLower.contains('phone') || nameLower.contains('ensemble')) {
+      icon = Icons.phone_android_rounded;
+    } else if (nameLower.contains('group') || nameLower.contains('all')) {
+      icon = Icons.speaker_group_rounded;
+    } else if (nameLower.contains('tv') || nameLower.contains('television')) {
+      icon = Icons.tv_rounded;
+    } else if (nameLower.contains('cast') || nameLower.contains('chromecast')) {
+      icon = Icons.cast_rounded;
+    } else {
+      icon = Icons.speaker_rounded;
+    }
+
+    return Container(
+      color: colorScheme.surfaceContainerHighest,
+      child: Center(
+        child: Icon(
+          icon,
+          color: colorScheme.onSurfaceVariant,
+          size: size * 0.5,
+        ),
+      ),
     );
   }
 
