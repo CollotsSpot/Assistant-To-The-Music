@@ -45,6 +45,26 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
     _loadTracks();
     _extractColors();
     _loadAlbumDescription();
+    _refreshFavoriteStatus();
+  }
+
+  Future<void> _refreshFavoriteStatus() async {
+    final maProvider = context.read<MusicAssistantProvider>();
+    if (maProvider.api == null) return;
+
+    try {
+      final freshAlbum = await maProvider.api!.getAlbumDetails(
+        widget.album.provider,
+        widget.album.itemId,
+      );
+      if (freshAlbum != null && mounted) {
+        setState(() {
+          _isFavorite = freshAlbum.favorite ?? false;
+        });
+      }
+    } catch (e) {
+      _logger.log('Error refreshing favorite status: $e');
+    }
   }
 
   Future<void> _extractColors() async {
