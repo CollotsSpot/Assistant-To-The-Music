@@ -853,7 +853,8 @@ class ExpandablePlayerState extends State<ExpandablePlayer>
     // Position progress bar so controls section is anchored at bottom
     final bottomSafeArea = MediaQuery.of(context).padding.bottom;
     final controlsSectionHeight = 222.0; // Total height of progress + controls + volume
-    final expandedProgressTop = screenSize.height - bottomSafeArea - controlsSectionHeight - 24; // 24px extra padding
+    final playButtonHalfHeight = 36.0; // Half of the 72px play button container
+    final expandedProgressTop = screenSize.height - bottomSafeArea - controlsSectionHeight - 24 - playButtonHalfHeight;
 
     // Calculate available space between art bottom and progress bar
     final artBottom = expandedArtTop + expandedArtSize;
