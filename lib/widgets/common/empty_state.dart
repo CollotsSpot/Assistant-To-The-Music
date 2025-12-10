@@ -64,6 +64,20 @@ class EmptyState extends StatelessWidget {
         message: 'No results found',
       );
 
+  /// Creates a custom empty state with title and subtitle
+  factory EmptyState.custom({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    VoidCallback? onRefresh,
+  }) =>
+      _CustomEmptyState(
+        icon: icon,
+        title: title,
+        subtitle: subtitle,
+        onRefresh: onRefresh,
+      );
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -94,6 +108,74 @@ class EmptyState extends StatelessWidget {
                 onPressed: onAction,
                 icon: const Icon(Icons.refresh_rounded),
                 label: Text(actionLabel!),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.surfaceVariant,
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A custom empty state with title and optional subtitle
+class _CustomEmptyState extends EmptyState {
+  final String title;
+  final String? subtitle;
+  final VoidCallback? onRefresh;
+
+  const _CustomEmptyState({
+    required super.icon,
+    required this.title,
+    this.subtitle,
+    this.onRefresh,
+  }) : super(message: title);
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Center(
+      child: Padding(
+        padding: Spacing.paddingAll24,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: iconSize,
+              color: colorScheme.onSurface.withOpacity(0.38),
+            ),
+            Spacing.vGap16,
+            Text(
+              title,
+              style: TextStyle(
+                color: colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (subtitle != null) ...[
+              Spacing.vGap8,
+              Text(
+                subtitle!,
+                style: TextStyle(
+                  color: colorScheme.onSurface.withOpacity(0.4),
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (onRefresh != null) ...[
+              Spacing.vGap24,
+              ElevatedButton.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Refresh'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.surfaceVariant,
                   foregroundColor: colorScheme.onSurfaceVariant,

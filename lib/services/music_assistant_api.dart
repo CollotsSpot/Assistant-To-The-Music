@@ -641,6 +641,26 @@ class MusicAssistantAPI {
     }
   }
 
+  /// Get artist details by URI
+  Future<Artist?> getArtistByUri(String uri) async {
+    try {
+      final response = await _sendCommand(
+        'music/item_by_uri',
+        args: {
+          'uri': uri,
+        },
+      );
+
+      final result = response['result'];
+      if (result == null) return null;
+
+      return Artist.fromJson(result as Map<String, dynamic>);
+    } catch (e) {
+      _logger.log('Error getting artist by URI: $e');
+      return null;
+    }
+  }
+
   Future<List<Track>> getAlbumTracks(String provider, String itemId) async {
     return await RetryHelper.retryNetwork(
       operation: () async {
@@ -1055,12 +1075,14 @@ class MusicAssistantAPI {
   }
 
   /// Play radio based on a track (generates similar tracks)
+  /// Prefers streaming provider URIs (Spotify, Tidal, etc.) for better recommendations
   Future<void> playRadio(String playerId, Track track) async {
     return await RetryHelper.retryCritical(
       operation: () async {
-        // Try using library URI if available, otherwise use provider URI
-        final libraryUri = track.uri;
-        final trackUri = libraryUri ?? _buildTrackUri(track);
+        // For radio mode, prefer streaming providers (Spotify, Tidal, etc.)
+        // as they provide better dynamic track recommendations
+        final trackUri = _buildRadioUri(track);
+        _logger.log('Radio: Starting with URI $trackUri');
 
         final args = {
           'queue_id': playerId,
@@ -1069,7 +1091,6 @@ class MusicAssistantAPI {
           'radio_mode': true, // Enable radio mode for similar tracks
         };
 
-
         await _sendCommand(
           'player_queues/play_media',
           args: args,
@@ -1077,6 +1098,110 @@ class MusicAssistantAPI {
 
       },
     );
+  }
+
+  /// Build URI for radio mode, preferring streaming providers for better recommendations
+  /// Priority: Spotify > Tidal > Deezer > Qobuz > Apple > YTM > any available > library
+  String _buildRadioUri(Track track) {
+    if (track.providerMappings != null && track.providerMappings!.isNotEmpty) {
+      // Providers that support dynamic radio recommendations (in priority order)
+      const radioProviders = ['spotify', 'tidal', 'deezer', 'qobuz', 'apple', 'ytmusic'];
+
+      // Try to find a streaming provider first
+      for (final providerPrefix in radioProviders) {
+        final mapping = track.providerMappings!.firstWhere(
+          (m) => m.available && m.providerInstance.toLowerCase().startsWith(providerPrefix),
+          orElse: () => ProviderMapping(providerInstance: '', itemId: '', available: false),
+        );
+        if (mapping.providerInstance.isNotEmpty) {
+          return '${mapping.providerInstance}://track/${mapping.itemId}';
+        }
+      }
+
+      // Fall back to any available provider (but not library)
+      final nonLibraryMapping = track.providerMappings!.firstWhere(
+        (m) => m.available && m.providerInstance != 'library',
+        orElse: () => ProviderMapping(providerInstance: '', itemId: '', available: false),
+      );
+      if (nonLibraryMapping.providerInstance.isNotEmpty) {
+        return '${nonLibraryMapping.providerInstance}://track/${nonLibraryMapping.itemId}';
+      }
+    }
+
+    // Last resort: use library URI or build from top-level provider
+    return track.uri ?? _buildTrackUri(track);
+  }
+
+  /// Play radio based on an artist (generates tracks from and similar to the artist)
+  /// Prefers streaming provider URIs (Spotify, Tidal, etc.) for better recommendations
+  Future<void> playArtistRadio(String playerId, Artist artist) async {
+    return await RetryHelper.retryCritical(
+      operation: () async {
+        final artistUri = _buildArtistRadioUri(artist);
+        _logger.log('Radio: Starting artist radio with URI $artistUri');
+
+        final args = {
+          'queue_id': playerId,
+          'media': [artistUri],
+          'option': 'replace',
+          'radio_mode': true,
+        };
+
+        await _sendCommand(
+          'player_queues/play_media',
+          args: args,
+        );
+      },
+    );
+  }
+
+  /// Add artist radio to queue (instead of replacing)
+  Future<void> playArtistRadioToQueue(String playerId, Artist artist) async {
+    return await RetryHelper.retryCritical(
+      operation: () async {
+        final artistUri = _buildArtistRadioUri(artist);
+        _logger.log('Radio: Adding artist radio to queue with URI $artistUri');
+
+        final args = {
+          'queue_id': playerId,
+          'media': [artistUri],
+          'option': 'add',  // Add to queue instead of replace
+          'radio_mode': true,
+        };
+
+        await _sendCommand(
+          'player_queues/play_media',
+          args: args,
+        );
+      },
+    );
+  }
+
+  /// Build URI for artist radio mode, preferring streaming providers
+  String _buildArtistRadioUri(Artist artist) {
+    if (artist.providerMappings != null && artist.providerMappings!.isNotEmpty) {
+      const radioProviders = ['spotify', 'tidal', 'deezer', 'qobuz', 'apple', 'ytmusic'];
+
+      for (final providerPrefix in radioProviders) {
+        final mapping = artist.providerMappings!.firstWhere(
+          (m) => m.available && m.providerInstance.toLowerCase().startsWith(providerPrefix),
+          orElse: () => ProviderMapping(providerInstance: '', itemId: '', available: false),
+        );
+        if (mapping.providerInstance.isNotEmpty) {
+          return '${mapping.providerInstance}://artist/${mapping.itemId}';
+        }
+      }
+
+      final nonLibraryMapping = artist.providerMappings!.firstWhere(
+        (m) => m.available && m.providerInstance != 'library',
+        orElse: () => ProviderMapping(providerInstance: '', itemId: '', available: false),
+      );
+      if (nonLibraryMapping.providerInstance.isNotEmpty) {
+        return '${nonLibraryMapping.providerInstance}://artist/${nonLibraryMapping.itemId}';
+      }
+    }
+
+    return artist.uri ?? '${artist.provider}://artist/${artist.itemId}';
   }
 
   /// Build track URI from provider mappings

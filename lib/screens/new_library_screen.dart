@@ -28,6 +28,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
   late TabController _tabController;
   List<Playlist> _playlists = [];
   bool _isLoadingPlaylists = true;
+  bool _showFavoritesOnly = false;
 
   // Restoration: Remember selected tab across app restarts
   final RestorableInt _selectedTabIndex = RestorableInt(0);
@@ -67,10 +68,13 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     super.dispose();
   }
 
-  Future<void> _loadPlaylists() async {
+  Future<void> _loadPlaylists({bool? favoriteOnly}) async {
     final maProvider = context.read<MusicAssistantProvider>();
     if (maProvider.api != null) {
-      final playlists = await maProvider.api!.getPlaylists(limit: 100);
+      final playlists = await maProvider.api!.getPlaylists(
+        limit: 100,
+        favoriteOnly: favoriteOnly,
+      );
       if (mounted) {
         setState(() {
           _playlists = playlists;
@@ -133,7 +137,28 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
               ),
             ),
             centerTitle: true,
-            actions: const [PlayerSelector()],
+            actions: [
+              // Favorites filter toggle
+              IconButton(
+                icon: Icon(
+                  _showFavoritesOnly ? Icons.favorite : Icons.favorite_border,
+                  color: _showFavoritesOnly ? colorScheme.error : colorScheme.onSurface,
+                ),
+                tooltip: _showFavoritesOnly ? 'Show all' : 'Show favorites only',
+                onPressed: () {
+                  setState(() {
+                    _showFavoritesOnly = !_showFavoritesOnly;
+                  });
+                  if (_showFavoritesOnly) {
+                    // Reload playlists with favorites filter
+                    _loadPlaylists(favoriteOnly: true);
+                  } else {
+                    _loadPlaylists();
+                  }
+                },
+              ),
+              const PlayerSelector(),
+            ],
             bottom: TabBar(
               controller: _tabController,
               labelColor: colorScheme.primary,
@@ -168,14 +193,26 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     return Selector<MusicAssistantProvider, (List<Artist>, bool)>(
       selector: (_, provider) => (provider.artists, provider.isLoading),
       builder: (context, data, _) {
-        final (artists, isLoading) = data;
+        final (allArtists, isLoading) = data;
         final colorScheme = Theme.of(context).colorScheme;
 
         if (isLoading) {
           return Center(child: CircularProgressIndicator(color: colorScheme.primary));
         }
 
+        // Filter by favorites if enabled
+        final artists = _showFavoritesOnly
+            ? allArtists.where((a) => a.favorite == true).toList()
+            : allArtists;
+
         if (artists.isEmpty) {
+          if (_showFavoritesOnly) {
+            return EmptyState.custom(
+              icon: Icons.favorite_border,
+              title: 'No favorite artists',
+              subtitle: 'Tap the heart on an artist to add them to favorites',
+            );
+          }
           return EmptyState.artists(
             onRefresh: () => context.read<MusicAssistantProvider>().loadLibrary(),
           );
@@ -186,7 +223,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
           backgroundColor: colorScheme.surface,
           onRefresh: () async => context.read<MusicAssistantProvider>().loadLibrary(),
           child: ListView.builder(
-            key: const PageStorageKey<String>('library_artists_list'),
+            key: PageStorageKey<String>('library_artists_list_${_showFavoritesOnly ? 'fav' : 'all'}'),
             cacheExtent: 500, // Prebuild items off-screen for smoother scrolling
             itemCount: artists.length,
             padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: BottomSpacing.navBarOnly),
@@ -261,14 +298,26 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     return Selector<MusicAssistantProvider, (List<Album>, bool)>(
       selector: (_, provider) => (provider.albums, provider.isLoading),
       builder: (context, data, _) {
-        final (albums, isLoading) = data;
+        final (allAlbums, isLoading) = data;
         final colorScheme = Theme.of(context).colorScheme;
 
         if (isLoading) {
           return Center(child: CircularProgressIndicator(color: colorScheme.primary));
         }
 
+        // Filter by favorites if enabled
+        final albums = _showFavoritesOnly
+            ? allAlbums.where((a) => a.favorite == true).toList()
+            : allAlbums;
+
         if (albums.isEmpty) {
+          if (_showFavoritesOnly) {
+            return EmptyState.custom(
+              icon: Icons.favorite_border,
+              title: 'No favorite albums',
+              subtitle: 'Tap the heart on an album to add it to favorites',
+            );
+          }
           return EmptyState.albums(
             onRefresh: () => context.read<MusicAssistantProvider>().loadLibrary(),
           );
@@ -279,7 +328,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
           backgroundColor: colorScheme.surface,
           onRefresh: () async => context.read<MusicAssistantProvider>().loadLibrary(),
           child: GridView.builder(
-            key: const PageStorageKey<String>('library_albums_grid'),
+            key: PageStorageKey<String>('library_albums_grid_${_showFavoritesOnly ? 'fav' : 'all'}'),
             cacheExtent: 500, // Prebuild items off-screen for smoother scrolling
             padding: EdgeInsets.only(left: 16, right: 16, top: 16, bottom: BottomSpacing.navBarOnly),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -312,15 +361,22 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     }
 
     if (_playlists.isEmpty) {
-      return EmptyState.playlists(onRefresh: _loadPlaylists);
+      if (_showFavoritesOnly) {
+        return EmptyState.custom(
+          icon: Icons.favorite_border,
+          title: 'No favorite playlists',
+          subtitle: 'Tap the heart on a playlist to add it to favorites',
+        );
+      }
+      return EmptyState.playlists(onRefresh: () => _loadPlaylists());
     }
 
     return RefreshIndicator(
       color: colorScheme.primary,
       backgroundColor: colorScheme.surface,
-      onRefresh: _loadPlaylists,
+      onRefresh: () => _loadPlaylists(favoriteOnly: _showFavoritesOnly ? true : null),
       child: ListView.builder(
-        key: const PageStorageKey<String>('library_playlists_list'),
+        key: PageStorageKey<String>('library_playlists_list_${_showFavoritesOnly ? 'fav' : 'all'}'),
         cacheExtent: 500, // Prebuild items off-screen for smoother scrolling
         itemCount: _playlists.length,
         padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: BottomSpacing.navBarOnly),
