@@ -211,8 +211,9 @@ class MetadataService {
   static final Map<String, String?> _mbidCache = {};
 
   /// Fetches artist image URL with fallback chain:
-  /// 1. Fanart.tv (requires free API key, uses MusicBrainz ID)
-  /// 2. TheAudioDB (if key configured)
+  /// 1. Deezer API (free, no key required, best coverage)
+  /// 2. Fanart.tv (requires free API key, high quality)
+  /// 3. TheAudioDB (if key configured)
   /// Returns the image URL if found, null otherwise
   static Future<String?> getArtistImageUrl(String artistName) async {
     // Check cache first
@@ -224,33 +225,34 @@ class MetadataService {
 
     print('🎨 Fetching artist image for "$artistName"...');
 
-    // Try Fanart.tv first (best source, free API key)
+    // Try Deezer first (free, no API key, best coverage)
+    final deezerUrl = await _fetchArtistImageFromDeezer(artistName);
+    if (deezerUrl != null) {
+      print('🎨 Deezer result for "$artistName": $deezerUrl');
+      _artistImageCache[cacheKey] = deezerUrl;
+      return deezerUrl;
+    }
+
+    // Try Fanart.tv (free API key required, high quality images)
     final fanartKey = await SettingsService.getFanartTvApiKey();
-    print('🎨 Fanart.tv key: ${fanartKey != null ? "${fanartKey.substring(0, 4)}..." : "null"}');
-
     if (fanartKey != null && fanartKey.isNotEmpty) {
-      // First get MusicBrainz ID (free, no key needed)
       final mbid = await _getMusicBrainzArtistId(artistName);
-      print('🎨 MusicBrainz ID for "$artistName": $mbid');
-
       if (mbid != null) {
         final imageUrl = await _fetchArtistImageFromFanartTv(mbid, fanartKey);
-        print('🎨 Fanart.tv result for "$artistName": $imageUrl');
-
         if (imageUrl != null) {
+          print('🎨 Fanart.tv result for "$artistName": $imageUrl');
           _artistImageCache[cacheKey] = imageUrl;
           return imageUrl;
         }
       }
     }
 
-    // Try TheAudioDB API as fallback
+    // Try TheAudioDB API as last fallback
     final audioDbKey = await SettingsService.getTheAudioDbApiKey();
     if (audioDbKey != null && audioDbKey.isNotEmpty) {
       final imageUrl = await _fetchArtistImageFromTheAudioDb(artistName, audioDbKey);
-      print('🎨 TheAudioDB result for "$artistName": $imageUrl');
-
       if (imageUrl != null) {
+        print('🎨 TheAudioDB result for "$artistName": $imageUrl');
         _artistImageCache[cacheKey] = imageUrl;
         return imageUrl;
       }
@@ -259,6 +261,35 @@ class MetadataService {
     // Cache the null result to avoid repeated failed lookups
     print('🎨 No image found for "$artistName"');
     _artistImageCache[cacheKey] = null;
+    return null;
+  }
+
+  /// Fetch artist image from Deezer (free, no API key required)
+  static Future<String?> _fetchArtistImageFromDeezer(String artistName) async {
+    try {
+      final uri = Uri.https(
+        'api.deezer.com',
+        '/search/artist',
+        {
+          'q': artistName,
+          'limit': '1',
+        },
+      );
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final artists = data['data'] as List?;
+        if (artists != null && artists.isNotEmpty) {
+          final artist = artists[0];
+          // Use picture_xl for high quality, fall back to picture_medium
+          return artist['picture_xl'] ?? artist['picture_medium'] ?? artist['picture'];
+        }
+      }
+    } catch (e) {
+      print('⚠️ Deezer artist image error: $e');
+    }
     return null;
   }
 
