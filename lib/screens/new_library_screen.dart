@@ -538,22 +538,6 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     // Sort artists alphabetically
     final sortedArtists = tracksByArtistAlbum.keys.toList()..sort();
 
-    // Build flat list of sections for ListView
-    final sections = <_TrackSection>[];
-    for (final artistName in sortedArtists) {
-      final albumsMap = tracksByArtistAlbum[artistName]!;
-      final sortedAlbums = albumsMap.keys.toList()..sort();
-      for (final albumName in sortedAlbums) {
-        final tracks = albumsMap[albumName]!;
-        sections.add(_TrackSection(
-          artistName: artistName,
-          albumName: albumName,
-          tracks: tracks,
-          firstTrack: tracks.first,
-        ));
-      }
-    }
-
     return RefreshIndicator(
       color: colorScheme.primary,
       backgroundColor: colorScheme.surface,
@@ -562,71 +546,84 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
         key: const PageStorageKey<String>('library_tracks_list'),
         cacheExtent: 500,
         padding: EdgeInsets.only(left: 8, right: 8, top: 8, bottom: BottomSpacing.navBarOnly),
-        itemCount: sections.length,
+        itemCount: sortedArtists.length,
         itemBuilder: (context, index) {
-          final section = sections[index];
-          final albumImageUrl = section.firstTrack.album != null
-              ? maProvider.api?.getImageUrl(section.firstTrack.album!, size: 128)
-              : null;
+          final artistName = sortedArtists[index];
+          final albumsMap = tracksByArtistAlbum[artistName]!;
+          final sortedAlbums = albumsMap.keys.toList()..sort();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Album header with art
+              // Artist header
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Row(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+                child: Text(
+                  artistName,
+                  style: textTheme.titleLarge?.copyWith(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Albums under this artist
+              ...sortedAlbums.map((albumName) {
+                final tracks = albumsMap[albumName]!;
+                final firstTrack = tracks.first;
+                final albumImageUrl = firstTrack.album != null
+                    ? maProvider.api?.getImageUrl(firstTrack.album!, size: 128)
+                    : null;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Album art
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
-                        borderRadius: BorderRadius.circular(8),
-                        image: albumImageUrl != null
-                            ? DecorationImage(
-                                image: CachedNetworkImageProvider(albumImageUrl),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: albumImageUrl == null
-                          ? Icon(Icons.album, color: colorScheme.onSurfaceVariant)
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    // Artist and album info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    // Album header with art
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                      child: Row(
                         children: [
-                          Text(
-                            section.artistName,
-                            style: textTheme.titleMedium?.copyWith(
-                              color: colorScheme.onSurface,
-                              fontWeight: FontWeight.w600,
+                          // Album art
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: colorScheme.surfaceVariant,
+                              borderRadius: BorderRadius.circular(6),
+                              image: albumImageUrl != null
+                                  ? DecorationImage(
+                                      image: CachedNetworkImageProvider(albumImageUrl),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            child: albumImageUrl == null
+                                ? Icon(Icons.album, color: colorScheme.onSurfaceVariant, size: 24)
+                                : null,
                           ),
-                          Text(
-                            section.albumName,
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurface.withOpacity(0.6),
+                          const SizedBox(width: 12),
+                          // Album name
+                          Expanded(
+                            child: Text(
+                              albumName,
+                              style: textTheme.titleSmall?.copyWith(
+                                color: colorScheme.onSurface.withOpacity(0.8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
                     ),
+                    // Tracks under this album
+                    ...tracks.map((track) => _buildTrackTile(context, track)),
                   ],
-                ),
-              ),
-              // Tracks under this album
-              ...section.tracks.map((track) => _buildTrackTile(context, track)),
-              const Divider(height: 1),
+                );
+              }),
+              const Divider(height: 16),
             ],
           );
         },
@@ -640,10 +637,11 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
     final textTheme = Theme.of(context).textTheme;
 
     return ListTile(
-      contentPadding: const EdgeInsets.only(left: 84, right: 16),
+      contentPadding: const EdgeInsets.only(left: 76, right: 16),
+      dense: true,
       title: Text(
         track.name,
-        style: textTheme.bodyLarge?.copyWith(
+        style: textTheme.bodyMedium?.copyWith(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w500,
         ),
@@ -653,7 +651,7 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
       trailing: const Icon(
         Icons.favorite,
         color: Colors.red,
-        size: 20,
+        size: 18,
       ),
       onTap: () async {
         final player = maProvider.selectedPlayer;
@@ -677,19 +675,4 @@ class _NewLibraryScreenState extends State<NewLibraryScreen>
       },
     );
   }
-}
-
-/// Helper class for track sections grouped by artist/album
-class _TrackSection {
-  final String artistName;
-  final String albumName;
-  final List<Track> tracks;
-  final Track firstTrack;
-
-  _TrackSection({
-    required this.artistName,
-    required this.albumName,
-    required this.tracks,
-    required this.firstTrack,
-  });
 }
