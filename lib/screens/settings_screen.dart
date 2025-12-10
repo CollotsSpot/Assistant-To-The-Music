@@ -18,7 +18,6 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _lastFmApiKeyController = TextEditingController();
   final _audioDbApiKeyController = TextEditingController();
-  final _fanartTvApiKeyController = TextEditingController();
 
   @override
   void initState() {
@@ -36,18 +35,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (audioDbKey != null) {
       _audioDbApiKeyController.text = audioDbKey;
     }
-
-    final fanartKey = await SettingsService.getFanartTvApiKey();
-    if (fanartKey != null) {
-      _fanartTvApiKeyController.text = fanartKey;
-    }
   }
 
   @override
   void dispose() {
     _lastFmApiKeyController.dispose();
     _audioDbApiKeyController.dispose();
-    _fanartTvApiKeyController.dispose();
     super.dispose();
   }
 
@@ -324,7 +317,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Add API keys to fetch artist images, biographies and album descriptions when Music Assistant doesn\'t have them',
+              'Artist images are automatically fetched from Deezer. Add API keys below for artist biographies and album descriptions.',
               style: textTheme.bodySmall?.copyWith(
                 color: colorScheme.onBackground.withOpacity(0.6),
               ),
@@ -362,43 +355,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               onChanged: (value) {
                 SettingsService.setLastFmApiKey(value.trim().isEmpty ? null : value.trim());
-                setState(() {}); // Update UI to show/hide clear button
-              },
-            ),
-
-            const SizedBox(height: 16),
-
-            TextField(
-              controller: _fanartTvApiKeyController,
-              style: TextStyle(color: colorScheme.onSurface),
-              decoration: InputDecoration(
-                labelText: 'Fanart.tv API Key (Recommended)',
-                hintText: 'Free key at fanart.tv - best for artist images',
-                hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.38)),
-                filled: true,
-                fillColor: colorScheme.surfaceVariant.withOpacity(0.3),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: Icon(
-                  Icons.image_rounded,
-                  color: colorScheme.onSurface.withOpacity(0.54),
-                ),
-                suffixIcon: _fanartTvApiKeyController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          setState(() {
-                            _fanartTvApiKeyController.clear();
-                          });
-                          SettingsService.setFanartTvApiKey(null);
-                        },
-                      )
-                    : null,
-              ),
-              onChanged: (value) {
-                SettingsService.setFanartTvApiKey(value.trim().isEmpty ? null : value.trim());
                 setState(() {}); // Update UI to show/hide clear button
               },
             ),

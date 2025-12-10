@@ -207,65 +207,16 @@ class MetadataService {
     return text.trim();
   }
 
-  // Cache for MusicBrainz IDs (artist name -> MBID)
-  static final Map<String, String?> _mbidCache = {};
-
-  /// Fetches artist image URL with fallback chain:
-  /// 1. Deezer API (free, no key required, best coverage)
-  /// 2. Fanart.tv (requires free API key, high quality)
-  /// 3. TheAudioDB (if key configured)
+  /// Fetches artist image URL from Deezer (free, no API key required)
   /// Returns the image URL if found, null otherwise
   static Future<String?> getArtistImageUrl(String artistName) async {
     // Check cache first
     final cacheKey = 'artistImage:$artistName';
     if (_artistImageCache.containsKey(cacheKey)) {
-      print('🎨 Artist image cache hit for "$artistName": ${_artistImageCache[cacheKey]}');
       return _artistImageCache[cacheKey];
     }
 
-    print('🎨 Fetching artist image for "$artistName"...');
-
-    // Try Deezer first (free, no API key, best coverage)
-    final deezerUrl = await _fetchArtistImageFromDeezer(artistName);
-    if (deezerUrl != null) {
-      print('🎨 Deezer result for "$artistName": $deezerUrl');
-      _artistImageCache[cacheKey] = deezerUrl;
-      return deezerUrl;
-    }
-
-    // Try Fanart.tv (free API key required, high quality images)
-    final fanartKey = await SettingsService.getFanartTvApiKey();
-    if (fanartKey != null && fanartKey.isNotEmpty) {
-      final mbid = await _getMusicBrainzArtistId(artistName);
-      if (mbid != null) {
-        final imageUrl = await _fetchArtistImageFromFanartTv(mbid, fanartKey);
-        if (imageUrl != null) {
-          print('🎨 Fanart.tv result for "$artistName": $imageUrl');
-          _artistImageCache[cacheKey] = imageUrl;
-          return imageUrl;
-        }
-      }
-    }
-
-    // Try TheAudioDB API as last fallback
-    final audioDbKey = await SettingsService.getTheAudioDbApiKey();
-    if (audioDbKey != null && audioDbKey.isNotEmpty) {
-      final imageUrl = await _fetchArtistImageFromTheAudioDb(artistName, audioDbKey);
-      if (imageUrl != null) {
-        print('🎨 TheAudioDB result for "$artistName": $imageUrl');
-        _artistImageCache[cacheKey] = imageUrl;
-        return imageUrl;
-      }
-    }
-
-    // Cache the null result to avoid repeated failed lookups
-    print('🎨 No image found for "$artistName"');
-    _artistImageCache[cacheKey] = null;
-    return null;
-  }
-
-  /// Fetch artist image from Deezer (free, no API key required)
-  static Future<String?> _fetchArtistImageFromDeezer(String artistName) async {
+    // Use Deezer API (free, no key, excellent coverage)
     try {
       final uri = Uri.https(
         'api.deezer.com',
@@ -284,123 +235,17 @@ class MetadataService {
         if (artists != null && artists.isNotEmpty) {
           final artist = artists[0];
           // Use picture_xl for high quality, fall back to picture_medium
-          return artist['picture_xl'] ?? artist['picture_medium'] ?? artist['picture'];
+          final imageUrl = artist['picture_xl'] ?? artist['picture_medium'] ?? artist['picture'];
+          _artistImageCache[cacheKey] = imageUrl;
+          return imageUrl;
         }
       }
     } catch (e) {
       print('⚠️ Deezer artist image error: $e');
     }
-    return null;
-  }
 
-  /// Get MusicBrainz artist ID from artist name (free, no API key required)
-  static Future<String?> _getMusicBrainzArtistId(String artistName) async {
-    // Check cache
-    if (_mbidCache.containsKey(artistName)) {
-      return _mbidCache[artistName];
-    }
-
-    try {
-      // MusicBrainz requires a User-Agent header
-      final uri = Uri.https(
-        'musicbrainz.org',
-        '/ws/2/artist/',
-        {
-          'query': 'artist:$artistName',
-          'fmt': 'json',
-          'limit': '1',
-        },
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {
-          'User-Agent': 'Ensemble/1.0 (music-player-app)',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final artists = data['artists'] as List?;
-        if (artists != null && artists.isNotEmpty) {
-          final mbid = artists[0]['id'] as String?;
-          _mbidCache[artistName] = mbid;
-          return mbid;
-        }
-      }
-    } catch (e) {
-      print('⚠️ MusicBrainz lookup error: $e');
-    }
-
-    _mbidCache[artistName] = null;
-    return null;
-  }
-
-  /// Fetch artist image from Fanart.tv using MusicBrainz ID
-  static Future<String?> _fetchArtistImageFromFanartTv(
-    String mbid,
-    String apiKey,
-  ) async {
-    try {
-      final uri = Uri.https(
-        'webservice.fanart.tv',
-        '/v3/music/$mbid',
-        {'api_key': apiKey},
-      );
-
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        // Try artistthumb first (best for cards), then artistbackground
-        final thumbs = data['artistthumb'] as List?;
-        if (thumbs != null && thumbs.isNotEmpty) {
-          return thumbs[0]['url'] as String?;
-        }
-
-        final backgrounds = data['artistbackground'] as List?;
-        if (backgrounds != null && backgrounds.isNotEmpty) {
-          return backgrounds[0]['url'] as String?;
-        }
-      }
-    } catch (e) {
-      print('⚠️ Fanart.tv artist image error: $e');
-    }
-    return null;
-  }
-
-  /// Fetch artist image from TheAudioDB
-  static Future<String?> _fetchArtistImageFromTheAudioDb(
-    String artistName,
-    String apiKey,
-  ) async {
-    try {
-      final uri = Uri.https(
-        'theaudiodb.com',
-        '/api/v1/json/$apiKey/search.php',
-        {'s': artistName},
-      );
-
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final artists = data['artists'];
-
-        if (artists != null && artists.isNotEmpty) {
-          final artist = artists[0];
-          // Try different image fields in order of preference
-          return artist['strArtistThumb'] ??
-              artist['strArtistFanart'] ??
-              artist['strArtistFanart2'] ??
-              artist['strArtistFanart3'];
-        }
-      }
-    } catch (e) {
-      print('⚠️ TheAudioDB artist image error: $e');
-    }
+    // Cache the null result to avoid repeated failed lookups
+    _artistImageCache[cacheKey] = null;
     return null;
   }
 
@@ -408,6 +253,5 @@ class MetadataService {
   static void clearCache() {
     _cache.clear();
     _artistImageCache.clear();
-    _mbidCache.clear();
   }
 }
