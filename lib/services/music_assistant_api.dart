@@ -620,13 +620,14 @@ class MusicAssistantAPI {
     }
   }
 
-  Future<Album?> getAlbumDetails(String provider, String itemId) async {
+  /// Get album details by URI
+  /// Use the album's uri field (e.g., "library://album/123" or "spotify://album/xyz")
+  Future<Album?> getAlbumByUri(String uri) async {
     try {
       final response = await _sendCommand(
-        'music/album',
+        'music/item_by_uri',
         args: {
-          'provider': provider,
-          'item_id': itemId,
+          'uri': uri,
         },
       );
 
@@ -635,7 +636,7 @@ class MusicAssistantAPI {
 
       return Album.fromJson(result as Map<String, dynamic>);
     } catch (e) {
-      _logger.log('Error getting album details: $e');
+      _logger.log('Error getting album by URI: $e');
       return null;
     }
   }

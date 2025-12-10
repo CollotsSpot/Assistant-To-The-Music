@@ -52,11 +52,15 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
     final maProvider = context.read<MusicAssistantProvider>();
     if (maProvider.api == null) return;
 
+    // Need a URI to fetch fresh album data
+    final albumUri = widget.album.uri;
+    if (albumUri == null || albumUri.isEmpty) {
+      _logger.log('Cannot refresh favorite status: album has no URI');
+      return;
+    }
+
     try {
-      final freshAlbum = await maProvider.api!.getAlbumDetails(
-        widget.album.provider,
-        widget.album.itemId,
-      );
+      final freshAlbum = await maProvider.api!.getAlbumByUri(albumUri);
       if (freshAlbum != null && mounted) {
         setState(() {
           _isFavorite = freshAlbum.favorite ?? false;
@@ -147,6 +151,9 @@ class _AlbumDetailsScreenState extends State<AlbumDetailsScreen> with SingleTick
       setState(() {
         _isFavorite = newState;
       });
+
+      // Invalidate home cache so the home screen shows updated favorite status
+      maProvider.invalidateHomeCache();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
