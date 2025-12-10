@@ -17,6 +17,7 @@ class SettingsService {
   static const String _keyCustomColor = 'custom_color';
   static const String _keyLastFmApiKey = 'lastfm_api_key';
   static const String _keyTheAudioDbApiKey = 'theaudiodb_api_key';
+  static const String _keyFanartTvApiKey = 'fanarttv_api_key';
   static const String _keyEnableLocalPlayback = 'enable_local_playback';
   static const String _keyLocalPlayerName = 'local_player_name';
   static const String _keyOwnerName = 'owner_name';
@@ -242,6 +243,20 @@ class SettingsService {
       await prefs.remove(_keyTheAudioDbApiKey);
     } else {
       await prefs.setString(_keyTheAudioDbApiKey, key);
+    }
+  }
+
+  static Future<String?> getFanartTvApiKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_keyFanartTvApiKey);
+  }
+
+  static Future<void> setFanartTvApiKey(String? key) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (key == null || key.isEmpty) {
+      await prefs.remove(_keyFanartTvApiKey);
+    } else {
+      await prefs.setString(_keyFanartTvApiKey, key);
     }
   }
 

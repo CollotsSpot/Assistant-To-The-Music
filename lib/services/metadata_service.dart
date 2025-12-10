@@ -207,7 +207,12 @@ class MetadataService {
     return text.trim();
   }
 
-  /// Fetches artist image URL with fallback to Last.fm and TheAudioDB
+  // Cache for MusicBrainz IDs (artist name -> MBID)
+  static final Map<String, String?> _mbidCache = {};
+
+  /// Fetches artist image URL with fallback chain:
+  /// 1. Fanart.tv (requires free API key, uses MusicBrainz ID)
+  /// 2. TheAudioDB (if key configured)
   /// Returns the image URL if found, null otherwise
   static Future<String?> getArtistImageUrl(String artistName) async {
     // Check cache first
@@ -216,17 +221,21 @@ class MetadataService {
       return _artistImageCache[cacheKey];
     }
 
-    // Try Last.fm API first (free, no key required for basic info)
-    final lastFmKey = await SettingsService.getLastFmApiKey();
-    if (lastFmKey != null && lastFmKey.isNotEmpty) {
-      final imageUrl = await _fetchArtistImageFromLastFm(artistName, lastFmKey);
-      if (imageUrl != null) {
-        _artistImageCache[cacheKey] = imageUrl;
-        return imageUrl;
+    // Try Fanart.tv first (best source, free API key)
+    final fanartKey = await SettingsService.getFanartTvApiKey();
+    if (fanartKey != null && fanartKey.isNotEmpty) {
+      // First get MusicBrainz ID (free, no key needed)
+      final mbid = await _getMusicBrainzArtistId(artistName);
+      if (mbid != null) {
+        final imageUrl = await _fetchArtistImageFromFanartTv(mbid, fanartKey);
+        if (imageUrl != null) {
+          _artistImageCache[cacheKey] = imageUrl;
+          return imageUrl;
+        }
       }
     }
 
-    // Try TheAudioDB API
+    // Try TheAudioDB API as fallback
     final audioDbKey = await SettingsService.getTheAudioDbApiKey();
     if (audioDbKey != null && audioDbKey.isNotEmpty) {
       final imageUrl = await _fetchArtistImageFromTheAudioDb(artistName, audioDbKey);
@@ -241,45 +250,80 @@ class MetadataService {
     return null;
   }
 
-  /// Fetch artist image from Last.fm
-  static Future<String?> _fetchArtistImageFromLastFm(
-    String artistName,
+  /// Get MusicBrainz artist ID from artist name (free, no API key required)
+  static Future<String?> _getMusicBrainzArtistId(String artistName) async {
+    // Check cache
+    if (_mbidCache.containsKey(artistName)) {
+      return _mbidCache[artistName];
+    }
+
+    try {
+      // MusicBrainz requires a User-Agent header
+      final uri = Uri.https(
+        'musicbrainz.org',
+        '/ws/2/artist/',
+        {
+          'query': 'artist:$artistName',
+          'fmt': 'json',
+          'limit': '1',
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'Ensemble/1.0 (music-player-app)',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 5));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final artists = data['artists'] as List?;
+        if (artists != null && artists.isNotEmpty) {
+          final mbid = artists[0]['id'] as String?;
+          _mbidCache[artistName] = mbid;
+          return mbid;
+        }
+      }
+    } catch (e) {
+      print('⚠️ MusicBrainz lookup error: $e');
+    }
+
+    _mbidCache[artistName] = null;
+    return null;
+  }
+
+  /// Fetch artist image from Fanart.tv using MusicBrainz ID
+  static Future<String?> _fetchArtistImageFromFanartTv(
+    String mbid,
     String apiKey,
   ) async {
     try {
-      final params = {
-        'method': 'artist.getinfo',
-        'artist': artistName,
-        'api_key': apiKey,
-        'format': 'json',
-      };
+      final uri = Uri.https(
+        'webservice.fanart.tv',
+        '/v3/music/$mbid',
+        {'api_key': apiKey},
+      );
 
-      final uri = Uri.https('ws.audioscrobbler.com', '/2.0/', params);
       final response = await http.get(uri).timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final artist = data['artist'];
-        if (artist != null) {
-          // Last.fm returns images array with different sizes
-          final images = artist['image'] as List?;
-          if (images != null && images.isNotEmpty) {
-            // Find 'extralarge' or 'large' size image
-            for (var img in images.reversed) {
-              final size = img['size'] as String?;
-              final url = img['#text'] as String?;
-              if (url != null &&
-                  url.isNotEmpty &&
-                  !url.contains('2a96cbd8b46e442fc41c2b86b821562f') && // Default blank image
-                  (size == 'extralarge' || size == 'large' || size == 'medium')) {
-                return url;
-              }
-            }
-          }
+
+        // Try artistthumb first (best for cards), then artistbackground
+        final thumbs = data['artistthumb'] as List?;
+        if (thumbs != null && thumbs.isNotEmpty) {
+          return thumbs[0]['url'] as String?;
+        }
+
+        final backgrounds = data['artistbackground'] as List?;
+        if (backgrounds != null && backgrounds.isNotEmpty) {
+          return backgrounds[0]['url'] as String?;
         }
       }
     } catch (e) {
-      print('⚠️ Last.fm artist image error: $e');
+      print('⚠️ Fanart.tv artist image error: $e');
     }
     return null;
   }
@@ -321,5 +365,6 @@ class MetadataService {
   static void clearCache() {
     _cache.clear();
     _artistImageCache.clear();
+    _mbidCache.clear();
   }
 }
