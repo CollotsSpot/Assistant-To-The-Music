@@ -50,7 +50,8 @@ class DebugLogger {
   List<String> get logs => _entries.map((e) => e.formatted).toList();
 
   // Set to true to only log perf entries (for FPS diagnosis)
-  static const bool _perfOnlyMode = true;
+  // Set to false for normal operation with full logging for user bug reports
+  static const bool _perfOnlyMode = false;
 
   void _addEntry(LogLevel level, String message, {String? context}) {
     // In perf-only mode, skip all non-perf logs
