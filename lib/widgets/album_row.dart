@@ -57,9 +57,10 @@ class _AlbumRowState extends State<AlbumRow> with AutomaticKeepAliveClientMixin 
     const titleHeight = 44.0; // 12 top padding + ~24 text + 8 bottom padding
     final contentHeight = totalHeight - titleHeight;
 
-    return SizedBox(
-      height: totalHeight,
-      child: Column(
+    return RepaintBoundary(
+      child: SizedBox(
+        height: totalHeight,
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
@@ -130,7 +131,8 @@ class _AlbumRowState extends State<AlbumRow> with AutomaticKeepAliveClientMixin 
               },
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

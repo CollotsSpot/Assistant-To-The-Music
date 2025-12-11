@@ -57,16 +57,17 @@ class _ArtistRowState extends State<ArtistRow> with AutomaticKeepAliveClientMixi
     const titleHeight = 44.0; // 12 top padding + ~24 text + 8 bottom padding
     final contentHeight = totalHeight - titleHeight;
 
-    return SizedBox(
-      height: totalHeight,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
-            child: Text(
-              widget.title,
-              style: textTheme.titleLarge?.copyWith(
+    return RepaintBoundary(
+      child: SizedBox(
+        height: totalHeight,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 8.0),
+              child: Text(
+                widget.title,
+                style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.onBackground,
               ),
@@ -130,7 +131,9 @@ class _ArtistRowState extends State<ArtistRow> with AutomaticKeepAliveClientMixi
               },
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }
