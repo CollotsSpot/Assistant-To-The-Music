@@ -284,10 +284,12 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
     // Sort by the random order index
     enabledFavorites.sort((a, b) => a.key.compareTo(b.key));
 
-    // Add widgets with spacing
-    for (final entry in enabledFavorites) {
-      widgets.add(const SizedBox(height: 8));
-      widgets.add(entry.value);
+    // Add widgets with spacing (no spacer before first row)
+    for (var i = 0; i < enabledFavorites.length; i++) {
+      if (i > 0) {
+        widgets.add(const SizedBox(height: 8));
+      }
+      widgets.add(enabledFavorites[i].value);
     }
 
     return widgets;
