@@ -433,6 +433,8 @@ class _DebugLogScreenState extends State<DebugLogScreen> {
 
   Color _getLevelColor(LogLevel level) {
     switch (level) {
+      case LogLevel.perf:
+        return Colors.purple;
       case LogLevel.debug:
         return Colors.grey;
       case LogLevel.info:
