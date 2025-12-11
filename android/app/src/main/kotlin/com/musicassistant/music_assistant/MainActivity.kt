@@ -2,11 +2,13 @@ package com.musicassistant.music_assistant
 
 import android.util.Log
 import android.view.KeyEvent
-import io.flutter.embedding.android.FlutterActivity
+import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
-class MainActivity: FlutterActivity() {
+// Extend AudioServiceActivity instead of FlutterActivity to support audio_service package
+// while also intercepting volume button events
+class MainActivity: AudioServiceActivity() {
     private val TAG = "EnsembleVolume"
     private val CHANNEL = "com.musicassistant.music_assistant/volume_buttons"
     private var methodChannel: MethodChannel? = null
