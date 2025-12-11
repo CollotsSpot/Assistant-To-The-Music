@@ -103,16 +103,23 @@ class _MusicAssistantAppState extends State<MusicAssistantApp> with WidgetsBindi
 
   Future<void> _adjustVolume(int delta) async {
     final player = _musicProvider.selectedPlayer;
-    if (player == null) return;
+    if (player == null) {
+      _logger.log('🔊 Hardware volume button pressed but no player selected');
+      return;
+    }
+
+    _logger.log('🔊 Hardware volume: player=${player.displayName}, current=${player.volume}, delta=$delta');
 
     final newVolume = (player.volume + delta).clamp(0, 100);
     if (newVolume != player.volume) {
       try {
         await _musicProvider.setVolume(player.playerId, newVolume);
-        _logger.debug('Hardware volume: ${player.volume} -> $newVolume', context: 'VolumeControl');
+        _logger.log('🔊 Hardware volume adjusted: ${player.volume} -> $newVolume for ${player.displayName}');
       } catch (e) {
         _logger.error('Hardware volume adjustment failed', context: 'VolumeControl', error: e);
       }
+    } else {
+      _logger.log('🔊 Hardware volume: already at limit ($newVolume)');
     }
   }
 

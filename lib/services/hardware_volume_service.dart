@@ -28,11 +28,11 @@ class HardwareVolumeService {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
         case 'volumeUp':
-          _logger.debug('Hardware volume up pressed', context: 'VolumeService');
+          _logger.log('🔊 Hardware VOLUME UP pressed');
           _volumeUpController.add(null);
           break;
         case 'volumeDown':
-          _logger.debug('Hardware volume down pressed', context: 'VolumeService');
+          _logger.log('🔊 Hardware VOLUME DOWN pressed');
           _volumeDownController.add(null);
           break;
       }
