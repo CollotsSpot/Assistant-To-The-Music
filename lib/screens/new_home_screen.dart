@@ -126,14 +126,13 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
     // Use LayoutBuilder to adapt to available screen height
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate available height for content
-        // We have 3 rows: 2 album rows and 1 artist row
-        // Each row has ~40px for title/padding
+        // Calculate available height for the 3 main rows
+        // Account for bottom nav + mini player space
         final availableHeight = constraints.maxHeight - BottomSpacing.withMiniPlayer;
 
-        // Total spacing between rows
-        const totalSpacing = 24.0; // 21 + 3
-        const titleHeight = 40.0; // Approximate height for title text + padding
+        // Total spacing between the 3 main rows
+        const totalSpacing = 16.0; // Reduced from 24 (was 21 + 3)
+        const titleHeight = 40.0; // Height for title text + padding per row
         const numRows = 3;
 
         // Calculate height available for row content (excluding titles and spacing)
@@ -162,7 +161,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
                 loadAlbums: () => provider.getRecentAlbumsWithCache(),
                 rowHeight: albumRowHeight,
               ),
-              const SizedBox(height: 21),
+              const SizedBox(height: 8),
 
               // Discover Artists (with caching)
               ArtistRow(
@@ -171,7 +170,7 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
                 loadArtists: () => provider.getDiscoverArtistsWithCache(),
                 rowHeight: artistRowHeight,
               ),
-              const SizedBox(height: 3),
+              const SizedBox(height: 8),
 
               // Discover Albums (with caching)
               AlbumRow(
@@ -207,7 +206,10 @@ class _NewHomeScreenState extends State<NewHomeScreen> with AutomaticKeepAliveCl
                 ),
               ],
 
-              SizedBox(height: BottomSpacing.withMiniPlayer), // Space for bottom nav + mini player
+              // Only add bottom spacing if favorites are shown (they scroll below)
+              // The main 3 rows are calculated to fit exactly without this
+              if (_showFavoriteAlbums || _showFavoriteArtists || _showFavoriteTracks)
+                SizedBox(height: BottomSpacing.withMiniPlayer),
             ],
             ),
           ),
