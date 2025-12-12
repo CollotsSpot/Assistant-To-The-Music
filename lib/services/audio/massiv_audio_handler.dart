@@ -290,34 +290,16 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
     Duration? duration,
   }) {
     // Keep local mode - DON'T set _isRemoteMode = true
-    _currentMediaItem = item;
-    mediaItem.add(item);
-
-    _logger.log('MassivAudioHandler: Updating local mode notification - ${item.title} (playing: $playing)');
-
-    // Use actual player position for local playback - don't override with MA's elapsed_time
-    // which may be stale and cause the progress bar to jump backwards
-    playbackState.add(playbackState.value.copyWith(
-      controls: [
-        MediaControl.skipToPrevious,
-        if (playing) MediaControl.pause else MediaControl.play,
-        MediaControl.skipToNext,
-        _switchPlayerControl,
-      ],
-      systemActions: const {
-        MediaAction.play,
-        MediaAction.pause,
-        MediaAction.skipToNext,
-        MediaAction.skipToPrevious,
-        MediaAction.stop,
-      },
-      androidCompactActionIndices: const [1, 2, 3],
-      processingState: AudioProcessingState.ready,
-      playing: playing,
-      updatePosition: _player.position,
-      bufferedPosition: duration ?? _player.duration ?? Duration.zero,
-      speed: 1.0,
-    ));
+    // Only update mediaItem if it changed - avoid unnecessary notification refreshes
+    // that cause blinking. The playbackState is managed by _broadcastState which
+    // responds to actual player events.
+    if (_currentMediaItem?.id != item.id ||
+        _currentMediaItem?.title != item.title ||
+        _currentMediaItem?.artist != item.artist) {
+      _currentMediaItem = item;
+      mediaItem.add(item);
+      _logger.log('MassivAudioHandler: Updating local mode notification - ${item.title}');
+    }
   }
 
   bool get isRemoteMode => _isRemoteMode;
