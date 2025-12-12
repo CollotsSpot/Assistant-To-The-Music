@@ -1166,6 +1166,29 @@ class MusicAssistantProvider with ChangeNotifier {
     final isBuiltinPlayer = builtinPlayerId != null && player.playerId == builtinPlayerId;
     if (isBuiltinPlayer) {
       audioHandler.setLocalMode();
+      // Update notification immediately for builtin player too
+      if (_currentTrack != null && (player.state == 'playing' || player.state == 'paused')) {
+        final track = _currentTrack!;
+        final artworkUrl = _api?.getImageUrl(track, size: 512);
+        final artistWithPlayer = track.artistsString.isNotEmpty
+            ? '${track.artistsString} • ${player.name}'
+            : player.name;
+        _localPlayer.updateNotification(
+          id: track.uri ?? track.itemId,
+          title: track.name,
+          artist: artistWithPlayer,
+          album: track.album?.name,
+          artworkUrl: artworkUrl,
+          duration: track.duration,
+        );
+      } else if (player.state == 'playing' || player.state == 'paused') {
+        // Builtin player active but no cached track - show player name placeholder
+        _localPlayer.updateNotification(
+          id: 'player_${player.playerId}',
+          title: player.name,
+          artist: 'Loading...',
+        );
+      }
     } else {
       // For remote players, immediately show notification if we have cached track info
       // and the player is playing (don't wait for polling to kick in)
@@ -1426,19 +1449,18 @@ class MusicAssistantProvider with ChangeNotifier {
         if (isBuiltinPlayer) {
           // Local playback - use local player notification
           // Include player name in artist line: "Artist • Player Name"
+          // Always update notification (not just on trackChanged) to ensure player name is current
           final artistWithPlayer = track.artistsString.isNotEmpty
               ? '${track.artistsString} • ${_selectedPlayer!.name}'
               : _selectedPlayer!.name;
-          if (trackChanged) {
-            _localPlayer.updateNotification(
-              id: track.uri ?? track.itemId,
-              title: track.name,
-              artist: artistWithPlayer,
-              album: track.album?.name,
-              artworkUrl: artworkUrl,
-              duration: track.duration,
-            );
-          }
+          _localPlayer.updateNotification(
+            id: track.uri ?? track.itemId,
+            title: track.name,
+            artist: artistWithPlayer,
+            album: track.album?.name,
+            artworkUrl: artworkUrl,
+            duration: track.duration,
+          );
         } else {
           // Remote MA player - show notification via remote mode
           // Include player name in artist line: "Artist • Player Name"
