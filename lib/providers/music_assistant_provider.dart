@@ -1160,9 +1160,25 @@ class MusicAssistantProvider with ChangeNotifier {
     if (isBuiltinPlayer) {
       audioHandler.setLocalMode();
     } else {
-      // Clear any existing remote state when switching players
-      // _updatePlayerState will set up the new remote state
-      audioHandler.clearRemotePlaybackState();
+      // For remote players, immediately show notification if we have cached track info
+      // and the player is playing (don't wait for polling to kick in)
+      if (_currentTrack != null && (player.state == 'playing' || player.state == 'paused')) {
+        final track = _currentTrack!;
+        final artworkUrl = _api?.getImageUrl(track, size: 512);
+        final mediaItem = audio_service.MediaItem(
+          id: track.uri ?? track.itemId,
+          title: track.name,
+          artist: track.artistsString,
+          album: track.album?.name ?? '',
+          duration: track.duration,
+          artUri: artworkUrl != null ? Uri.tryParse(artworkUrl) : null,
+        );
+        audioHandler.setRemotePlaybackState(
+          item: mediaItem,
+          playing: player.state == 'playing',
+          duration: track.duration,
+        );
+      }
     }
 
     _startPlayerStatePolling();
