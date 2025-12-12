@@ -281,6 +281,44 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
     _isRemoteMode = false;
   }
 
+  /// Update notification for local mode (builtin player) without switching to remote mode
+  /// This allows the notification to show the correct player/track info while keeping
+  /// pause working for local audio playback.
+  void updateLocalModeNotification({
+    required MediaItem item,
+    required bool playing,
+    Duration position = Duration.zero,
+    Duration? duration,
+  }) {
+    // Keep local mode - DON'T set _isRemoteMode = true
+    _currentMediaItem = item;
+    mediaItem.add(item);
+
+    _logger.log('MassivAudioHandler: Updating local mode notification - ${item.title} (playing: $playing)');
+
+    playbackState.add(playbackState.value.copyWith(
+      controls: [
+        MediaControl.skipToPrevious,
+        if (playing) MediaControl.pause else MediaControl.play,
+        MediaControl.skipToNext,
+        _switchPlayerControl,
+      ],
+      systemActions: const {
+        MediaAction.play,
+        MediaAction.pause,
+        MediaAction.skipToNext,
+        MediaAction.skipToPrevious,
+        MediaAction.stop,
+      },
+      androidCompactActionIndices: const [1, 2, 3],
+      processingState: AudioProcessingState.ready,
+      playing: playing,
+      updatePosition: position,
+      bufferedPosition: duration ?? Duration.zero,
+      speed: 1.0,
+    ));
+  }
+
   bool get isRemoteMode => _isRemoteMode;
 
   // --- Expose player state for provider ---

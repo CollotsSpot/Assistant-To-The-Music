@@ -1166,8 +1166,7 @@ class MusicAssistantProvider with ChangeNotifier {
     final isBuiltinPlayer = builtinPlayerId != null && player.playerId == builtinPlayerId;
     if (isBuiltinPlayer) {
       audioHandler.setLocalMode();
-      // Update notification immediately for builtin player too
-      // Use same notification mechanism as remote players (audioHandler) for consistency
+      // Update notification for builtin player using local mode method (keeps pause working)
       if (_currentTrack != null && (player.state == 'playing' || player.state == 'paused')) {
         final track = _currentTrack!;
         final artworkUrl = _api?.getImageUrl(track, size: 512);
@@ -1182,7 +1181,7 @@ class MusicAssistantProvider with ChangeNotifier {
           duration: track.duration,
           artUri: artworkUrl != null ? Uri.tryParse(artworkUrl) : null,
         );
-        audioHandler.setRemotePlaybackState(
+        audioHandler.updateLocalModeNotification(
           item: mediaItem,
           playing: player.state == 'playing',
           duration: track.duration,
@@ -1194,7 +1193,7 @@ class MusicAssistantProvider with ChangeNotifier {
           title: player.name,
           artist: 'Loading...',
         );
-        audioHandler.setRemotePlaybackState(
+        audioHandler.updateLocalModeNotification(
           item: mediaItem,
           playing: player.state == 'playing',
           duration: Duration.zero,
@@ -1458,8 +1457,7 @@ class MusicAssistantProvider with ChangeNotifier {
         final isBuiltinPlayer = builtinPlayerId != null && _selectedPlayer!.playerId == builtinPlayerId;
 
         if (isBuiltinPlayer) {
-          // Local playback - use same notification mechanism as remote players
-          // Always update notification to ensure player name is current
+          // Local playback - use local mode notification (keeps pause working)
           final artistWithPlayer = track.artistsString.isNotEmpty
               ? '${track.artistsString} • ${_selectedPlayer!.name}'
               : _selectedPlayer!.name;
@@ -1471,7 +1469,7 @@ class MusicAssistantProvider with ChangeNotifier {
             duration: track.duration,
             artUri: artworkUrl != null ? Uri.tryParse(artworkUrl) : null,
           );
-          audioHandler.setRemotePlaybackState(
+          audioHandler.updateLocalModeNotification(
             item: mediaItem,
             playing: _selectedPlayer!.state == 'playing',
             duration: track.duration,
@@ -1498,24 +1496,34 @@ class MusicAssistantProvider with ChangeNotifier {
         }
       } else {
         // No track data available - show player name placeholder for active players
+        final builtinPlayerId = await SettingsService.getBuiltinPlayerId();
+        final isBuiltinPlayer = builtinPlayerId != null && _selectedPlayer!.playerId == builtinPlayerId;
+
         if (_currentTrack != null) {
           _currentTrack = null;
           stateChanged = true;
         }
 
         // Show player name placeholder so notification shows correct player
-        // Works for both builtin and remote players using same notification mechanism
         if (_selectedPlayer!.state == 'playing' || _selectedPlayer!.state == 'paused') {
           final mediaItem = audio_service.MediaItem(
             id: 'player_${_selectedPlayer!.playerId}',
             title: _selectedPlayer!.name,
             artist: 'No track info',
           );
-          audioHandler.setRemotePlaybackState(
-            item: mediaItem,
-            playing: _selectedPlayer!.state == 'playing',
-            duration: Duration.zero,
-          );
+          if (isBuiltinPlayer) {
+            audioHandler.updateLocalModeNotification(
+              item: mediaItem,
+              playing: _selectedPlayer!.state == 'playing',
+              duration: Duration.zero,
+            );
+          } else {
+            audioHandler.setRemotePlaybackState(
+              item: mediaItem,
+              playing: _selectedPlayer!.state == 'playing',
+              duration: Duration.zero,
+            );
+          }
         } else {
           audioHandler.clearRemotePlaybackState();
         }
