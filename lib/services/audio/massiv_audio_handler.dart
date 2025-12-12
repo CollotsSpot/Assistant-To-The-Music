@@ -97,7 +97,7 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
         MediaControl.skipToPrevious,
         if (playing) MediaControl.pause else MediaControl.play,
         MediaControl.skipToNext,
-        // Note: We intentionally omit MediaControl.stop to avoid the white square icon issue
+        _switchPlayerControl, // Switch player button
       ],
       // System-level actions (for headphones, car stereos, etc.)
       systemActions: const {
@@ -111,7 +111,8 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
         MediaAction.skipToPrevious,
       },
       // Which buttons to show in compact notification (max 3)
-      androidCompactActionIndices: const [0, 1, 2],
+      // Show: play/pause (1), skip-next (2), switch-player (3)
+      androidCompactActionIndices: const [1, 2, 3],
       processingState: {
         ProcessingState.idle: AudioProcessingState.idle,
         ProcessingState.loading: AudioProcessingState.loading,
@@ -255,7 +256,9 @@ class MassivAudioHandler extends BaseAudioHandler with SeekHandler {
         MediaAction.skipToPrevious,
         MediaAction.stop,
       },
-      androidCompactActionIndices: const [0, 1, 2],
+      // Which buttons to show in compact notification (max 3)
+      // Show: play/pause (1), skip-next (2), switch-player (3)
+      androidCompactActionIndices: const [1, 2, 3],
       processingState: AudioProcessingState.ready,
       playing: playing,
       updatePosition: position,

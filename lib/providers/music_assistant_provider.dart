@@ -1169,10 +1169,14 @@ class MusicAssistantProvider with ChangeNotifier {
       if (_currentTrack != null && (player.state == 'playing' || player.state == 'paused')) {
         final track = _currentTrack!;
         final artworkUrl = _api?.getImageUrl(track, size: 512);
+        // Include player name in artist line: "Artist • Player Name"
+        final artistWithPlayer = track.artistsString.isNotEmpty
+            ? '${track.artistsString} • ${player.name}'
+            : player.name;
         final mediaItem = audio_service.MediaItem(
           id: track.uri ?? track.itemId,
           title: track.name,
-          artist: track.artistsString,
+          artist: artistWithPlayer,
           album: track.album?.name ?? '',
           duration: track.duration,
           artUri: artworkUrl != null ? Uri.tryParse(artworkUrl) : null,
@@ -1194,18 +1198,29 @@ class MusicAssistantProvider with ChangeNotifier {
     }
   }
 
-  /// Cycle to the next available player (for notification switch button)
+  /// Cycle to the next active player (for notification switch button)
+  /// Only cycles through players that are currently playing or paused
   void selectNextPlayer() {
-    final players = _availablePlayers.where((p) => p.available).toList();
-    if (players.isEmpty || _selectedPlayer == null) return;
+    // Only include players that are available AND actively playing/paused
+    final activePlayers = _availablePlayers.where((p) =>
+      p.available && (p.state == 'playing' || p.state == 'paused')
+    ).toList();
 
-    final currentIndex = players.indexWhere((p) => p.playerId == _selectedPlayer!.playerId);
-    if (currentIndex == -1) return;
+    if (activePlayers.isEmpty) {
+      _logger.log('🔄 No active players to switch to');
+      return;
+    }
 
-    final nextIndex = (currentIndex + 1) % players.length;
-    final nextPlayer = players[nextIndex];
+    if (_selectedPlayer == null) return;
 
-    _logger.log('🔄 Switching to next player: ${nextPlayer.name}');
+    // Find current player in active list
+    final currentIndex = activePlayers.indexWhere((p) => p.playerId == _selectedPlayer!.playerId);
+
+    // Calculate next index - if current isn't in active list, start at 0
+    final nextIndex = currentIndex == -1 ? 0 : (currentIndex + 1) % activePlayers.length;
+    final nextPlayer = activePlayers[nextIndex];
+
+    _logger.log('🔄 Switching to next active player: ${nextPlayer.name} (${nextIndex + 1}/${activePlayers.length})');
     selectPlayer(nextPlayer);
   }
 
@@ -1406,10 +1421,14 @@ class MusicAssistantProvider with ChangeNotifier {
           }
         } else {
           // Remote MA player - show notification via remote mode
+          // Include player name in artist line: "Artist • Player Name"
+          final artistWithPlayer = track.artistsString.isNotEmpty
+              ? '${track.artistsString} • ${_selectedPlayer!.name}'
+              : _selectedPlayer!.name;
           final mediaItem = audio_service.MediaItem(
             id: track.uri ?? track.itemId,
             title: track.name,
-            artist: track.artistsString,
+            artist: artistWithPlayer,
             album: track.album?.name ?? '',
             duration: track.duration,
             artUri: artworkUrl != null ? Uri.tryParse(artworkUrl) : null,
