@@ -1189,6 +1189,19 @@ class MusicAssistantProvider with ChangeNotifier {
           playing: player.state == 'playing',
           duration: track.duration,
         );
+      } else if (player.state == 'playing' || player.state == 'paused') {
+        // Player is active but no cached track - show player name placeholder
+        // This prevents stale notification from previous player
+        final mediaItem = audio_service.MediaItem(
+          id: 'player_${player.playerId}',
+          title: player.name,
+          artist: 'Loading...',
+        );
+        audioHandler.setRemotePlaybackState(
+          item: mediaItem,
+          playing: player.state == 'playing',
+          duration: Duration.zero,
+        );
       }
     }
 
@@ -1447,15 +1460,29 @@ class MusicAssistantProvider with ChangeNotifier {
           );
         }
       } else {
+        // No track data available - show player name placeholder for active players
+        final builtinPlayerId = await SettingsService.getBuiltinPlayerId();
+        final isBuiltinPlayer = builtinPlayerId != null && _selectedPlayer!.playerId == builtinPlayerId;
+
         if (_currentTrack != null) {
           _currentTrack = null;
           stateChanged = true;
-          // Clear notification when no track
-          final builtinPlayerId = await SettingsService.getBuiltinPlayerId();
-          final isBuiltinPlayer = builtinPlayerId != null && _selectedPlayer!.playerId == builtinPlayerId;
-          if (!isBuiltinPlayer) {
-            audioHandler.clearRemotePlaybackState();
-          }
+        }
+
+        // Show player name placeholder so notification shows correct player
+        if (!isBuiltinPlayer && (_selectedPlayer!.state == 'playing' || _selectedPlayer!.state == 'paused')) {
+          final mediaItem = audio_service.MediaItem(
+            id: 'player_${_selectedPlayer!.playerId}',
+            title: _selectedPlayer!.name,
+            artist: 'No track info',
+          );
+          audioHandler.setRemotePlaybackState(
+            item: mediaItem,
+            playing: _selectedPlayer!.state == 'playing',
+            duration: Duration.zero,
+          );
+        } else if (!isBuiltinPlayer) {
+          audioHandler.clearRemotePlaybackState();
         }
       }
 
