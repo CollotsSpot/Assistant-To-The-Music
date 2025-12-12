@@ -212,6 +212,9 @@ class PlayerProvider with ChangeNotifier {
   Future<void> _reportLocalPlayerState() async {
     if (_api == null) return;
 
+    // Don't try to report state if not authenticated - avoids spamming errors
+    if (_api!.currentConnectionState != MAConnectionState.authenticated) return;
+
     final playerId = await SettingsService.getBuiltinPlayerId();
     if (playerId == null) return;
 
