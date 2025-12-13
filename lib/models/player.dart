@@ -32,26 +32,54 @@ class Player {
   bool get isMuted => volumeMuted ?? false;
   int get volume => volumeLevel ?? 0;
 
+  // Track when this Player object was created (for local interpolation fallback)
+  static final Map<String, double> _playerCreationTimes = {};
+
   // Calculate current elapsed time (interpolated if playing)
   double get currentElapsedTime {
     if (elapsedTime == null) {
       return 0;
     }
 
-    if (!isPlaying || elapsedTimeLastUpdated == null) {
+    if (!isPlaying) {
       return elapsedTime!;
     }
 
-    // If playing, interpolate based on time since last update
     final now = DateTime.now().millisecondsSinceEpoch / 1000.0;
-    final timeSinceUpdate = now - elapsedTimeLastUpdated!;
 
-    // Safety check: if time since update is negative or too large, just return elapsed time
-    if (timeSinceUpdate < 0 || timeSinceUpdate > 30) {
-      return elapsedTime!;
+    // Try server-provided timestamp first
+    if (elapsedTimeLastUpdated != null) {
+      final timeSinceUpdate = now - elapsedTimeLastUpdated!;
+
+      // Clamp to reasonable range: 0 to 10 seconds
+      // - Negative means clock skew (client ahead of server) - clamp to 0
+      // - > 10 seconds likely means stale data or network delay - clamp to 10
+      // This prevents jumps while still allowing some interpolation
+      final clampedTime = timeSinceUpdate.clamp(0.0, 10.0);
+      return elapsedTime! + clampedTime;
     }
 
-    return elapsedTime! + timeSinceUpdate;
+    // Fallback: use local creation time for interpolation
+    // This handles the case where server doesn't send elapsed_time_last_updated
+    final creationKey = '$playerId:$elapsedTime';
+    if (!_playerCreationTimes.containsKey(creationKey)) {
+      // First time seeing this player/position combo - record creation time
+      _playerCreationTimes[creationKey] = now;
+      // Clean up old entries to prevent memory leak
+      if (_playerCreationTimes.length > 50) {
+        final keysToRemove = _playerCreationTimes.keys.take(25).toList();
+        for (final key in keysToRemove) {
+          _playerCreationTimes.remove(key);
+        }
+      }
+    }
+
+    final creationTime = _playerCreationTimes[creationKey]!;
+    final timeSinceCreation = now - creationTime;
+
+    // Clamp local interpolation to 10 seconds as well
+    final clampedTime = timeSinceCreation.clamp(0.0, 10.0);
+    return elapsedTime! + clampedTime;
   }
 
   factory Player.fromJson(Map<String, dynamic> json) {
